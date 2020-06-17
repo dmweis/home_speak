@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+git pull
+
+cargo install --path .
+
+cat <<EOT | sudo tee /etc/systemd/system/home_speak.service > /dev/null
+[Unit]
+Description=Home Speak
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5s
+Environment=GOOGLE_API_KEY=$(echo $GOOGLE_API_KEY)
+ExecStart=/home/$(whoami)/.cargo/bin/home_speak
+[Install]
+WantedBy=default.target
+EOT
+
+sudo systemctl daemon-reload
+sudo systemctl enable home_speak
+sudo systemctl restart home_speak
