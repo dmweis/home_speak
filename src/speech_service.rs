@@ -6,7 +6,7 @@ use log::*;
 use std::path::Path;
 use std::io::prelude::*;
 use sha2::{Sha256, Digest};
-use std::fs::File;
+use std::fs::{ File, self };
 use std::io::{ Seek, Read };
 
 struct AudioCache {
@@ -17,6 +17,7 @@ struct AudioCache {
 impl AudioCache {
     fn new(cache_dir_path: String) -> Result<AudioCache, Box<dyn std::error::Error>> {
         let path = Path::new(&cache_dir_path);
+        fs::create_dir_all(path)?;
         if !path.exists() {
             Err("Cache dir path doesn't exist")?;
         }
