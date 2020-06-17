@@ -14,8 +14,14 @@ use std::str;
     author = "David M. Weis <dweis7@gmail.com>",
     about = "CLI tool for playing text to speech commands using Google text to speech cloud API"
 )]
-struct Opts {}
-
+struct Opts {
+    #[clap(
+        short = "c",
+        long = "cache-dir",
+        about = "Path to caching directory"
+    )]
+    cache_dir_path: Option<String>
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = ConfigBuilder::new()
@@ -29,11 +35,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let google_api_key = env::var("GOOGLE_API_KEY").expect("Please set GOOGLE_API_KEY");
-    let _: Opts = Opts::parse();
+    let args: Opts = Opts::parse();
 
-    let speech_service = speech_service::SpeechService::new(google_api_key)?;
+    let speech_service = speech_service::SpeechService::new(google_api_key, args.cache_dir_path)?;
 
-    let mqtt_options = MqttOptions::new("home_speak", "mqtt.local", 1883)
+    let mqtt_options = MqttOptions::new("home_speak_2", "mqtt.local", 1883)
         .set_reconnect_opts(ReconnectOptions::Always(5));
 
     let (mut mqtt_client, notifications) = MqttClient::start(mqtt_options).expect("Failed to connect to MQTT host");
