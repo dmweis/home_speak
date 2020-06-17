@@ -12,7 +12,7 @@ Type=simple
 Restart=on-failure
 RestartSec=5s
 Environment=GOOGLE_API_KEY=$(echo $GOOGLE_API_KEY)
-ExecStart=/home/$(whoami)/.cargo/bin/home_speak
+ExecStart=/home/$(whoami)/.cargo/bin/home_speak -c /home/$(whoami)/sounds
 [Install]
 WantedBy=default.target
 EOT
