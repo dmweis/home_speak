@@ -1,9 +1,11 @@
+mod speech_service;
+
 use clap::Clap;
 use std::env;
-use google_tts;
-use rodio::{self, DeviceTrait};
-use std::io::Cursor;
-use std::io::BufReader;
+use rumqtt::{MqttClient, MqttOptions, QoS, ReconnectOptions, Notification};
+use log::*;
+use simplelog::*;
+use std::str;
 
 
 #[derive(Clap)]
@@ -12,37 +14,54 @@ use std::io::BufReader;
     author = "David M. Weis <dweis7@gmail.com>",
     about = "CLI tool for playing text to speech commands using Google text to speech cloud API"
 )]
-struct Opts {
-    #[clap(
-        short = "m",
-        long = "message",
-        about = "text"
-    )]
-    message: String,
-}
+struct Opts {}
 
-fn play_sound(data: Vec<u8>) {
-    let buffer = Cursor::new(data);
-    let output_device = rodio::default_output_device().expect("Failed getting default device");
-    if output_device.default_output_format().is_ok() {
-        let output_sink = rodio::Sink::new(&output_device);
-        output_sink.append(rodio::Decoder::new(BufReader::new(buffer)).expect("Failed accessing output device"));
-        output_sink.sleep_until_end();
-    } else {
-        eprintln!("Device doesn't support output");
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let config = ConfigBuilder::new()
+        .add_filter_allow_str(env!("CARGO_PKG_NAME"))
+        .build();
+    if TermLogger::init(LevelFilter::Info, config.clone(), TerminalMode::Mixed).is_err() {
+        eprintln!("Failed to create term logger");
+        if SimpleLogger::init(LevelFilter::Info, config).is_err() {
+            eprintln!("Failed to create simple logger");
+        }
     }
-}
 
-fn main() {
     let google_api_key = env::var("GOOGLE_API_KEY").expect("Please set GOOGLE_API_KEY");
-    let opts: Opts = Opts::parse();
+    let _: Opts = Opts::parse();
 
-    let client = google_tts::GoogleTtsClient::new(google_api_key);
-    let data = client.synthesize(
-        google_tts::TextInput::with_text(opts.message.to_owned()),
-        google_tts::VoiceProps::default_english_female_wavenet(),
-        google_tts::AudioConfig::default_with_encoding(google_tts::AudioEncoding::Mp3)
-    ).unwrap();
+    let speech_service = speech_service::SpeechService::new(google_api_key)?;
 
-    play_sound(data.as_byte_stream().unwrap());
+    let mqtt_options = MqttOptions::new("home_speak", "mqtt.local", 1883)
+        .set_reconnect_opts(ReconnectOptions::Always(5));
+
+    let (mut mqtt_client, notifications) = MqttClient::start(mqtt_options).expect("Failed to connect to MQTT host");
+
+    mqtt_client.subscribe("home/say", QoS::AtLeastOnce).expect("Failed to subscribe to channel");
+    mqtt_client.subscribe("discord/receive/722904321108213871", QoS::AtLeastOnce).expect("Failed to subscribe to channel");
+
+    for notification in notifications {
+        match notification {
+            Notification::Publish(message) => {
+                trace!("New message");
+                match str::from_utf8(&message.payload) {
+                    Ok(message_text) => speech_service.say(message_text.to_owned())?,
+                    Err(error) => error!("Error while trying to play message {}", error),
+                }
+            },
+            Notification::Disconnection => {
+                warn!("Client lost connection");
+            },
+            Notification::Reconnection => {
+                warn!("client reconnected");
+                mqtt_client.subscribe("home/say", QoS::AtLeastOnce).expect("Failed to subscribe to channel");
+                mqtt_client.subscribe("discord/receive/722904321108213871", QoS::AtLeastOnce).expect("Failed to subscribe to channel");
+            },
+            other => {
+                warn!("Unexpected message {:?}", other);
+            }
+        }
+    }
+    Ok(())
 }
