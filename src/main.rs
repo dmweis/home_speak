@@ -88,7 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::thread::spawn(move || {
         mqtt_service(mqtt_sender);
     });
-    
+
     let rest_sender = s.clone();
     let route = warp::path("say")
     .and(warp::post())
@@ -102,9 +102,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "Error"
         }
     });
-
-    warp::serve(route).run(([127, 0, 0, 1], 3030)).await;
-
-
+    warp::serve(route).run(([0, 0, 0, 0], 3000)).await;
     Ok(())
 }
