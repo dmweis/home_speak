@@ -82,7 +82,7 @@ impl SpeechService {
         })
     }
 
-    pub fn say(&self, text: String) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn say(&self, text: String) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(audio_cache) = &self.audio_cache {
             if let Some(file) = audio_cache.get(text.clone()) {
                 info!("Using cached value");
@@ -94,7 +94,7 @@ impl SpeechService {
                     google_tts::TextInput::with_text(text.clone()),
                     google_tts::VoiceProps::default_english_female_wavenet(),
                     google_tts::AudioConfig::default_with_encoding(google_tts::AudioEncoding::Mp3)
-                )?;
+                ).await?;
                 audio_cache.set(text.clone(), data.as_byte_stream()?)?;
                 let buffer = Cursor::new(data.as_byte_stream()?);
                 self.output_sink.append(rodio::Decoder::new(BufReader::new(buffer))?);
@@ -105,7 +105,7 @@ impl SpeechService {
                 google_tts::TextInput::with_text(text),
                 google_tts::VoiceProps::default_english_female_wavenet(),
                 google_tts::AudioConfig::default_with_encoding(google_tts::AudioEncoding::Mp3)
-            )?;
+            ).await?;
     
             let buffer = Cursor::new(data.as_byte_stream()?);
             self.output_sink.append(rodio::Decoder::new(BufReader::new(buffer))?);

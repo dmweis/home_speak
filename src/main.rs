@@ -6,6 +6,43 @@ use rumqtt::{MqttClient, MqttOptions, QoS, ReconnectOptions, Notification};
 use log::*;
 use simplelog::*;
 use std::str;
+use crossbeam_channel::{ unbounded, Sender };
+use warp::Filter;
+use bytes::Bytes;
+
+
+fn mqtt_service(sender: Sender<String>) {
+
+    let mqtt_options = MqttOptions::new("home_speak_3", "mqtt.local", 1883)
+        .set_reconnect_opts(ReconnectOptions::Always(5));
+
+    let (mut mqtt_client, notifications) = MqttClient::start(mqtt_options).expect("Failed to connect to MQTT host");
+
+    mqtt_client.subscribe("home/say", QoS::AtLeastOnce).expect("Failed to subscribe to channel");
+    mqtt_client.subscribe("discord/receive/722904321108213871", QoS::AtLeastOnce).expect("Failed to subscribe to channel");
+    for notification in notifications {
+        match notification {
+            Notification::Publish(message) => {
+                trace!("New message");
+                match str::from_utf8(&message.payload) {
+                    Ok(message_text) => sender.send(message_text.to_owned()).unwrap(),
+                    Err(error) => error!("Error while trying to play message {}", error),
+                }
+            },
+            Notification::Disconnection => {
+                warn!("Client lost connection");
+            },
+            Notification::Reconnection => {
+                warn!("client reconnected");
+                mqtt_client.subscribe("home/say", QoS::AtLeastOnce).expect("Failed to subscribe to channel");
+                mqtt_client.subscribe("discord/receive/722904321108213871", QoS::AtLeastOnce).expect("Failed to subscribe to channel");
+            },
+            other => {
+                warn!("Unexpected message {:?}", other);
+            }
+        }
+    }
+}
 
 
 #[derive(Clap)]
@@ -23,7 +60,8 @@ struct Opts {
     cache_dir_path: Option<String>
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = ConfigBuilder::new()
         .add_filter_allow_str(env!("CARGO_PKG_NAME"))
         .build();
@@ -37,37 +75,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let google_api_key = env::var("GOOGLE_API_KEY").expect("Please set GOOGLE_API_KEY");
     let args: Opts = Opts::parse();
 
+    let (s, r) = unbounded();
     let speech_service = speech_service::SpeechService::new(google_api_key, args.cache_dir_path)?;
 
-    let mqtt_options = MqttOptions::new("home_speak_2", "mqtt.local", 1883)
-        .set_reconnect_opts(ReconnectOptions::Always(5));
-
-    let (mut mqtt_client, notifications) = MqttClient::start(mqtt_options).expect("Failed to connect to MQTT host");
-
-    mqtt_client.subscribe("home/say", QoS::AtLeastOnce).expect("Failed to subscribe to channel");
-    mqtt_client.subscribe("discord/receive/722904321108213871", QoS::AtLeastOnce).expect("Failed to subscribe to channel");
-
-    for notification in notifications {
-        match notification {
-            Notification::Publish(message) => {
-                trace!("New message");
-                match str::from_utf8(&message.payload) {
-                    Ok(message_text) => speech_service.say(message_text.to_owned())?,
-                    Err(error) => error!("Error while trying to play message {}", error),
-                }
-            },
-            Notification::Disconnection => {
-                warn!("Client lost connection");
-            },
-            Notification::Reconnection => {
-                warn!("client reconnected");
-                mqtt_client.subscribe("home/say", QoS::AtLeastOnce).expect("Failed to subscribe to channel");
-                mqtt_client.subscribe("discord/receive/722904321108213871", QoS::AtLeastOnce).expect("Failed to subscribe to channel");
-            },
-            other => {
-                warn!("Unexpected message {:?}", other);
-            }
+    tokio::spawn(async move {
+        for msg in r {
+            speech_service.say(msg).await.unwrap();
         }
-    }
+    });
+
+    let mqtt_sender = s.clone();
+    std::thread::spawn(move || {
+        mqtt_service(mqtt_sender);
+    });
+    
+    let rest_sender = s.clone();
+    let route = warp::path("say")
+    .and(warp::post())
+    .and(warp::body::bytes())
+    .map(move |payload: Bytes| {
+        if let Ok(text) = str::from_utf8(&payload) {
+            rest_sender.send(text.to_owned()).unwrap();
+            "Ok"
+        } else {
+            error!("Failed processing rest request");
+            "Error"
+        }
+    });
+
+    warp::serve(route).run(([127, 0, 0, 1], 3030)).await;
+
+
     Ok(())
 }
