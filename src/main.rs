@@ -13,7 +13,7 @@ use bytes::Bytes;
 
 fn mqtt_service(sender: Sender<String>) {
 
-    let mqtt_options = MqttOptions::new("home_speak_3", "mqtt.local", 1883)
+    let mqtt_options = MqttOptions::new("home_speak", "mqtt.local", 1883)
         .set_reconnect_opts(ReconnectOptions::Always(5));
 
     let (mut mqtt_client, notifications) = MqttClient::start(mqtt_options).expect("Failed to connect to MQTT host");

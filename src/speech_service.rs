@@ -1,6 +1,5 @@
 use google_tts;
 use std::io::Cursor;
-use std::io::BufReader;
 use rodio::{self, DeviceTrait};
 use log::*;
 use std::path::Path;
@@ -56,7 +55,7 @@ impl AudioCache {
 
 pub struct SpeechService {
     speech_client: google_tts::GoogleTtsClient,
-    output_sink: rodio::Sink,
+    output_device: rodio::Device,
     audio_cache: Option<AudioCache>,
 }
 
@@ -66,7 +65,6 @@ impl SpeechService {
 
         let output_device = rodio::default_output_device().ok_or("Failed to get default output device")?;
         info!("Started SpeechService with {}", output_device.name()?);
-        let output_sink = rodio::Sink::new(&output_device);
 
         let audio_cache = match cache_dir_path {
             Some(path) => {
@@ -77,16 +75,23 @@ impl SpeechService {
 
         Ok(SpeechService {
             speech_client: client,
-            output_sink,
+            output_device,
             audio_cache,
         })
+    }
+
+    fn play<R: Read + Seek + Send + 'static>(&self, data: R) -> Result<(), Box<dyn std::error::Error>> {
+        let output_sink = rodio::Sink::new(&self.output_device);
+        output_sink.append(rodio::Decoder::new(data)?);
+        output_sink.sleep_until_end();
+        Ok(())
     }
 
     pub async fn say(&self, text: String) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(audio_cache) = &self.audio_cache {
             if let Some(file) = audio_cache.get(text.clone()) {
                 info!("Using cached value");
-                self.output_sink.append(rodio::Decoder::new(file)?);
+                self.play(file)?;
                 
             } else {
                 info!("Writing new file");
@@ -97,7 +102,7 @@ impl SpeechService {
                 ).await?;
                 audio_cache.set(text.clone(), data.as_byte_stream()?)?;
                 let buffer = Cursor::new(data.as_byte_stream()?);
-                self.output_sink.append(rodio::Decoder::new(BufReader::new(buffer))?);
+                self.play(buffer)?;
             }
             Ok(())
         } else {
@@ -108,7 +113,7 @@ impl SpeechService {
             ).await?;
     
             let buffer = Cursor::new(data.as_byte_stream()?);
-            self.output_sink.append(rodio::Decoder::new(BufReader::new(buffer))?);
+            self.play(buffer)?;
             Ok(())
         }
     }
