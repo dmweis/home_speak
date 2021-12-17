@@ -15,7 +15,7 @@ simplelog = "0.11"
 log = "0.4"
 rodio = "0.14"
 clap = "3.0.0-beta.1"
-sha2 = "0.9"
+sha2 = "0.10"
 warp = "0.2"
 crossbeam-channel = "0.4"
 tokio = { version = "0.2", features = ["macros", "rt-core"] }
