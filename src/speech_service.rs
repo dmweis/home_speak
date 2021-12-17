@@ -35,6 +35,7 @@ impl AudioCache {
     }
 
     fn set(&self, text: String, contents: Vec<u8>) -> Result<(), Box<dyn std::error::Error>> {
+        // TODO: Cache invalidation does not handle voices
         let path = Path::new(&self.cache_dir_path);
         let mut hasher = Sha256::new();
         hasher.update(text);
