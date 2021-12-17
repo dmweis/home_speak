@@ -2,7 +2,6 @@
 
 [![codecov](https://codecov.io/gh/dmweis/home_speak/branch/main/graph/badge.svg)](https://codecov.io/gh/dmweis/home_speak)
 [![Rust](https://github.com/dmweis/home_speak/workflows/Rust/badge.svg)](https://github.com/dmweis/home_speak/actions)
-[![Rust-windows](https://github.com/dmweis/home_speak/workflows/Rust-windows/badge.svg)](https://github.com/dmweis/home_speak/actions)
 [![Private docs](https://github.com/dmweis/home_speak/workflows/Deploy%20Docs%20to%20GitHub%20Pages/badge.svg)](https://davidweis.dev/home_speak/home_speak/index.html)
 
 Play messages submitted over MQTT or REST api into voice using google text to speech
