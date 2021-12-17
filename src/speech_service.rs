@@ -1,5 +1,4 @@
 use log::*;
-use rodio::{self, DeviceTrait};
 use sha2::{Digest, Sha256};
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -51,7 +50,6 @@ impl AudioCache {
 
 pub struct SpeechService {
     speech_client: google_tts::GoogleTtsClient,
-    output_device: rodio::Device,
     audio_cache: Option<AudioCache>,
 }
 
@@ -62,10 +60,6 @@ impl SpeechService {
     ) -> Result<SpeechService, Box<dyn std::error::Error>> {
         let client = google_tts::GoogleTtsClient::new(google_api_key);
 
-        let output_device =
-            rodio::default_output_device().ok_or("Failed to get default output device")?;
-        info!("Started SpeechService with {}", output_device.name()?);
-
         let audio_cache = match cache_dir_path {
             Some(path) => Some(AudioCache::new(path)?),
             None => None,
@@ -73,7 +67,6 @@ impl SpeechService {
 
         Ok(SpeechService {
             speech_client: client,
-            output_device,
             audio_cache,
         })
     }
@@ -82,9 +75,11 @@ impl SpeechService {
         &self,
         data: R,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let output_sink = rodio::Sink::new(&self.output_device);
-        output_sink.append(rodio::Decoder::new(data)?);
-        output_sink.sleep_until_end();
+        // Simple way to spawn a new sink for every new sample
+        let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
+        let sink = rodio::Sink::try_new(&stream_handle).unwrap();
+        sink.append(rodio::Decoder::new(data)?);
+        sink.sleep_until_end();
         Ok(())
     }
 
