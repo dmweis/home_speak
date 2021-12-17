@@ -8,6 +8,7 @@ cat <<EOT | sudo tee /etc/systemd/system/home_speak.service > /dev/null
 [Unit]
 Description=Home Speak
 [Service]
+User=$(whoami)
 Type=simple
 Restart=on-failure
 RestartSec=5s
