@@ -16,6 +16,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - name: Install libasound2-dev
+        run: apt install -y libasound2-dev
       - uses: actions-rs/cargo@v1
         with:
           command: test
