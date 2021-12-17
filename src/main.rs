@@ -2,54 +2,12 @@ mod speech_service;
 
 use bytes::Bytes;
 use clap::Clap;
-use crossbeam_channel::{unbounded, Sender};
+use crossbeam_channel::unbounded;
 use log::*;
-use rumqtt::{MqttClient, MqttOptions, Notification, QoS, ReconnectOptions};
 use simplelog::*;
 use std::env;
 use std::str;
 use warp::Filter;
-
-fn mqtt_service(sender: Sender<String>) {
-    let mqtt_options = MqttOptions::new("home_speak", "mqtt.local", 1883)
-        .set_reconnect_opts(ReconnectOptions::Always(5));
-
-    let (mut mqtt_client, notifications) =
-        MqttClient::start(mqtt_options).expect("Failed to connect to MQTT host");
-
-    mqtt_client
-        .subscribe("home/say", QoS::AtLeastOnce)
-        .expect("Failed to subscribe to channel");
-    mqtt_client
-        .subscribe("discord/receive/722904321108213871", QoS::AtLeastOnce)
-        .expect("Failed to subscribe to channel");
-    for notification in notifications {
-        match notification {
-            Notification::Publish(message) => {
-                trace!("New message");
-                match str::from_utf8(&message.payload) {
-                    Ok(message_text) => sender.send(message_text.to_owned()).unwrap(),
-                    Err(error) => error!("Error while trying to play message {}", error),
-                }
-            }
-            Notification::Disconnection => {
-                warn!("Client lost connection");
-            }
-            Notification::Reconnection => {
-                warn!("client reconnected");
-                mqtt_client
-                    .subscribe("home/say", QoS::AtLeastOnce)
-                    .expect("Failed to subscribe to channel");
-                mqtt_client
-                    .subscribe("discord/receive/722904321108213871", QoS::AtLeastOnce)
-                    .expect("Failed to subscribe to channel");
-            }
-            other => {
-                warn!("Unexpected message {:?}", other);
-            }
-        }
-    }
-}
 
 #[derive(Clap)]
 #[clap(
@@ -84,11 +42,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         for msg in r {
             speech_service.say(msg).await.unwrap();
         }
-    });
-
-    let mqtt_sender = s.clone();
-    std::thread::spawn(move || {
-        mqtt_service(mqtt_sender);
     });
 
     let rest_sender = s.clone();
