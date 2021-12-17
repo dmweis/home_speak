@@ -49,6 +49,8 @@ jobs:
           toolchain: stable
           override: true
       - run: rustup component add clippy
+      - name: Install libasound2-dev
+        run: sudo apt install -y libasound2-dev
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
