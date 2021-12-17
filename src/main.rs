@@ -7,6 +7,7 @@ use log::*;
 use simplelog::*;
 use std::env;
 use std::str;
+use std::vec;
 use warp::Filter;
 
 #[derive(Clap)]
@@ -22,19 +23,19 @@ struct Opts {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config = ConfigBuilder::new()
-        .add_filter_allow_str(env!("CARGO_PKG_NAME"))
-        .build();
+    // let config = ConfigBuilder::new()
+    //     .add_filter_allow_str(env!("CARGO_PKG_NAME"))
+    //     .build();
     if TermLogger::init(
         LevelFilter::Info,
-        config.clone(),
+        Config::default(),
         TerminalMode::Mixed,
         ColorChoice::Auto,
     )
     .is_err()
     {
         eprintln!("Failed to create term logger");
-        if SimpleLogger::init(LevelFilter::Info, config).is_err() {
+        if SimpleLogger::init(LevelFilter::Info, Config::default()).is_err() {
             eprintln!("Failed to create simple logger");
         }
     }
@@ -51,6 +52,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let phrases = vec![
+        "Hi?",
+        "How is life you nerd?",
+        "This is me testing things!",
+        "This works so well!",
+    ];
+
+    for phrase in phrases {
+        s.send(String::from(phrase)).unwrap();
+    }
+
     let rest_sender = s.clone();
     let route = warp::path("say")
         .and(warp::post())
@@ -58,7 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(move |payload: Bytes| {
             if let Ok(text) = str::from_utf8(&payload) {
                 rest_sender.send(text.to_owned()).unwrap();
-                "Ok"
+                "Ok\n"
             } else {
                 error!("Failed processing rest request");
                 "Error"
