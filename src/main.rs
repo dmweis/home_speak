@@ -1,7 +1,7 @@
 mod speech_service;
 
 use bytes::Bytes;
-use clap::Clap;
+use clap::Parser;
 use crossbeam_channel::unbounded;
 use log::*;
 use simplelog::*;
@@ -10,14 +10,15 @@ use std::str;
 use std::vec;
 use warp::Filter;
 
-#[derive(Clap)]
+#[derive(Parser)]
 #[clap(
     version = "0.1.0",
     author = "David M. Weis <dweis7@gmail.com>",
     about = "CLI tool for playing text to speech commands using Google text to speech cloud API"
 )]
 struct Opts {
-    #[clap(short = "c", long = "cache-dir", about = "Path to caching directory")]
+    // Path to caching directory
+    #[clap(short, long = "cache-dir")]
     cache_dir_path: Option<String>,
 }
 
