@@ -23,9 +23,6 @@ struct Opts {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // let config = ConfigBuilder::new()
-    //     .add_filter_allow_str(env!("CARGO_PKG_NAME"))
-    //     .build();
     if TermLogger::init(
         LevelFilter::Info,
         Config::default(),
