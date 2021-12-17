@@ -1,6 +1,9 @@
 # Home Speak
 
-[![Build Status](https://travis-ci.com/dmweis/home_speak.svg?branch=master)](https://travis-ci.com/dmweis/home_speak)
+[![codecov](https://codecov.io/gh/dmweis/home_speak/branch/main/graph/badge.svg)](https://codecov.io/gh/dmweis/home_speak)
+[![Rust](https://github.com/dmweis/home_speak/workflows/Rust/badge.svg)](https://github.com/dmweis/home_speak/actions)
+[![Rust-windows](https://github.com/dmweis/home_speak/workflows/Rust-windows/badge.svg)](https://github.com/dmweis/home_speak/actions)
+[![Private docs](https://github.com/dmweis/home_speak/workflows/Deploy%20Docs%20to%20GitHub%20Pages/badge.svg)](https://davidweis.dev/home_speak/home_speak/index.html)
 
 Play messages submitted over MQTT or REST api into voice using google text to speech
 
@@ -10,7 +13,7 @@ You should be able to create API token for your google account [here](https://co
 
 ## Install
 
-``` bash
+```bash
 $ export GOOGLE_API_KEY=YOUR_API_TOKEN
 % ./install_script
 ```
@@ -18,8 +21,8 @@ $ export GOOGLE_API_KEY=YOUR_API_TOKEN
 ## Dependencies
 
 In case build fails with alsa-sys build stepa you want to install dev dependencies for `alsa`.  
-On debian the package is called `libasound2-dev`.  
+On debian the package is called `libasound2-dev`.
 
-```
-$ sudo apt install libasound2-dev -y
+```bash
+sudo apt install libasound2-dev -y
 ```
