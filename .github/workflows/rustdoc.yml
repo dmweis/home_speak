@@ -22,6 +22,9 @@ jobs:
           override: true
           components: rustfmt, rust-src
 
+      - name: Install libasound2-dev
+        run: sudo apt install -y libasound2-dev
+
       - name: Build Documentation
         uses: actions-rs/cargo@v1
         with:
