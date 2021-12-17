@@ -1,2 +1,5 @@
 /target
 tmp
+
+# Local dev sample cache
+sample_cache/*
