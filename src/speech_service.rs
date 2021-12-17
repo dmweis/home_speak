@@ -51,6 +51,7 @@ impl AudioCache {
 pub struct SpeechService {
     speech_client: google_tts::GoogleTtsClient,
     audio_cache: Option<AudioCache>,
+    voice: google_tts::VoiceProps,
 }
 
 impl SpeechService {
@@ -68,6 +69,7 @@ impl SpeechService {
         Ok(SpeechService {
             speech_client: client,
             audio_cache,
+            voice: google_tts::VoiceProps::default_english_female_wavenet(),
         })
     }
 
@@ -94,7 +96,7 @@ impl SpeechService {
                     .speech_client
                     .synthesize(
                         google_tts::TextInput::with_text(text.clone()),
-                        google_tts::VoiceProps::default_english_female_wavenet(),
+                        self.voice.clone(),
                         google_tts::AudioConfig::default_with_encoding(
                             google_tts::AudioEncoding::Mp3,
                         ),
@@ -110,7 +112,7 @@ impl SpeechService {
                 .speech_client
                 .synthesize(
                     google_tts::TextInput::with_text(text),
-                    google_tts::VoiceProps::default_english_female_wavenet(),
+                    self.voice.clone(),
                     google_tts::AudioConfig::default_with_encoding(google_tts::AudioEncoding::Mp3),
                 )
                 .await?;
