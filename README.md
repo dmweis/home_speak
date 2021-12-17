@@ -10,6 +10,12 @@ Play messages submitted over MQTT or REST api into voice using google text to sp
 
 You should be able to create API token for your google account [here](https://console.developers.google.com/apis/credentials)
 
+## Simple curl call
+
+```bash
+curl --data "Test string" localhost:3000/say
+```
+
 ## Install
 
 ```bash
