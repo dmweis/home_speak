@@ -25,7 +25,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = ConfigBuilder::new()
         .add_filter_allow_str(env!("CARGO_PKG_NAME"))
         .build();
-    if TermLogger::init(LevelFilter::Info, config.clone(), TerminalMode::Mixed).is_err() {
+    if TermLogger::init(
+        LevelFilter::Info,
+        config.clone(),
+        TerminalMode::Mixed,
+        ColorChoice::Auto,
+    )
+    .is_err()
+    {
         eprintln!("Failed to create term logger");
         if SimpleLogger::init(LevelFilter::Info, config).is_err() {
             eprintln!("Failed to create simple logger");
