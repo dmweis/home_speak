@@ -10,6 +10,16 @@ struct AudioCache {
     cache_dir_path: String,
 }
 
+fn crate_file_name(text: &str, voice: &google_tts::VoiceProps) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(text);
+    // Turning it into json to hash is a hack.
+    // TODO: hash the type not the json
+    hasher.update(serde_json::to_string(voice).unwrap());
+    let hashed = hasher.finalize();
+    format!("{:x}.mp3", hashed)
+}
+
 impl AudioCache {
     fn new(cache_dir_path: String) -> Result<AudioCache, Box<dyn std::error::Error>> {
         let path = Path::new(&cache_dir_path);
@@ -20,12 +30,9 @@ impl AudioCache {
         Ok(AudioCache { cache_dir_path })
     }
 
-    fn get(&self, text: String) -> Option<Box<impl Read + Seek>> {
+    fn get(&self, text: &str, voice: &google_tts::VoiceProps) -> Option<Box<impl Read + Seek>> {
         let path = Path::new(&self.cache_dir_path);
-        let mut hasher = Sha256::new();
-        hasher.update(text);
-        let hashed = hasher.finalize();
-        let hashed = format!("{:x}.mp3", hashed);
+        let hashed = crate_file_name(text, voice);
         let file_path = path.join(hashed);
         if let Ok(file) = File::open(file_path) {
             Some(Box::new(file))
@@ -34,13 +41,14 @@ impl AudioCache {
         }
     }
 
-    fn set(&self, text: String, contents: Vec<u8>) -> Result<(), Box<dyn std::error::Error>> {
-        // TODO: Cache invalidation does not handle voices
+    fn set(
+        &self,
+        text: &str,
+        voice: &google_tts::VoiceProps,
+        contents: Vec<u8>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let path = Path::new(&self.cache_dir_path);
-        let mut hasher = Sha256::new();
-        hasher.update(text);
-        let hashed = hasher.finalize();
-        let hashed = format!("{:x}.mp3", hashed);
+        let hashed = crate_file_name(text, voice);
         let file_path = path.join(hashed);
         let mut file = File::create(file_path)?;
         file.write_all(&contents)?;
@@ -70,7 +78,7 @@ impl SpeechService {
         Ok(SpeechService {
             speech_client: client,
             audio_cache,
-            voice: google_tts::VoiceProps::default_english_female_wavenet(),
+            voice: google_tts::VoiceProps::default_english_female(),
         })
     }
 
@@ -88,7 +96,7 @@ impl SpeechService {
 
     pub async fn say(&self, text: String) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(audio_cache) = &self.audio_cache {
-            if let Some(file) = audio_cache.get(text.clone()) {
+            if let Some(file) = audio_cache.get(&text, &self.voice) {
                 info!("Using cached value");
                 self.play(file)?;
             } else {
@@ -103,7 +111,7 @@ impl SpeechService {
                         ),
                     )
                     .await?;
-                audio_cache.set(text.clone(), data.as_byte_stream()?)?;
+                audio_cache.set(&text, &self.voice, data.as_byte_stream()?)?;
                 let buffer = Cursor::new(data.as_byte_stream()?);
                 self.play(buffer)?;
             }

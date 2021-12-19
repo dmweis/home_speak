@@ -614,6 +614,7 @@ dependencies = [
  "log",
  "rodio",
  "serde 1.0.132",
+ "serde_json",
  "sha2",
  "simplelog",
  "tokio",
