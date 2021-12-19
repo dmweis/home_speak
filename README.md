@@ -18,9 +18,17 @@ curl --data "Test string" localhost:3000/say
 
 ## Install
 
+Export google api token with an env var
+
 ```bash
-$ export GOOGLE_API_KEY=YOUR_API_TOKEN
+$ export APP_GOOGLE_API_KEY=YOUR_API_TOKEN
 % ./install_script
+```
+
+or by by crating a config file `dev_settings.yaml`:
+
+```yaml
+google_api_key: "YOUR_API_TOKEN"
 ```
 
 ## Dependencies
