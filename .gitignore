@@ -2,4 +2,5 @@
 tmp
 
 # Local dev sample cache
-sample_cache/*
+audio_cache/*
+dev_settings.yaml

@@ -5,10 +5,26 @@ use clap::Parser;
 use crossbeam_channel::unbounded;
 use log::*;
 use simplelog::*;
-use std::env;
 use std::str;
 use std::vec;
 use warp::Filter;
+
+use serde::Deserialize;
+
+#[derive(Deserialize, Debug, Clone)]
+struct AppConfig {
+    google_api_key: String,
+    cache_dir_path: Option<String>,
+}
+
+fn get_settings() -> Result<AppConfig, Box<dyn std::error::Error>> {
+    let mut settings = config::Config::default();
+    settings
+        .merge(config::File::with_name("settings"))?
+        .merge(config::File::with_name("dev_settings"))?
+        .merge(config::Environment::with_prefix("APP"))?;
+    Ok(settings.try_into()?)
+}
 
 #[derive(Parser)]
 #[clap(
@@ -16,11 +32,7 @@ use warp::Filter;
     author = "David M. Weis <dweis7@gmail.com>",
     about = "CLI tool for playing text to speech commands using Google text to speech cloud API"
 )]
-struct Opts {
-    // Path to caching directory
-    #[clap(short, long = "cache-dir")]
-    cache_dir_path: Option<String>,
-}
+struct Opts;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -38,11 +50,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let google_api_key = env::var("GOOGLE_API_KEY").expect("Please set GOOGLE_API_KEY");
-    let args: Opts = Opts::parse();
+    let app_config = get_settings()?;
 
     let (s, r) = unbounded();
-    let speech_service = speech_service::SpeechService::new(google_api_key, args.cache_dir_path)?;
+    let speech_service =
+        speech_service::SpeechService::new(app_config.google_api_key, app_config.cache_dir_path)?;
 
     tokio::spawn(async move {
         for msg in r {
