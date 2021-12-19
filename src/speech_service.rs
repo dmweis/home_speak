@@ -78,7 +78,7 @@ impl SpeechService {
         Ok(SpeechService {
             speech_client: client,
             audio_cache,
-            voice: google_tts::VoiceProps::default_english_female(),
+            voice: google_tts::VoiceProps::default_english_female_wavenet(),
         })
     }
 
