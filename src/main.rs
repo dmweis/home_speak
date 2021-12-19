@@ -4,12 +4,11 @@ use bytes::Bytes;
 use clap::Parser;
 use crossbeam_channel::unbounded;
 use log::*;
-use simplelog::*;
-use std::str;
-use std::vec;
-use warp::Filter;
-
 use serde::Deserialize;
+use simplelog::*;
+use std::io::Read;
+use std::str;
+use warp::Filter;
 
 #[derive(Deserialize, Debug, Clone)]
 struct AppConfig {
@@ -32,7 +31,10 @@ fn get_settings() -> Result<AppConfig, Box<dyn std::error::Error>> {
     author = "David M. Weis <dweis7@gmail.com>",
     about = "CLI tool for playing text to speech commands using Google text to speech cloud API"
 )]
-struct Opts;
+struct Opts {
+    #[clap(short, long)]
+    phrases: Option<String>,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -49,6 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             eprintln!("Failed to create simple logger");
         }
     }
+    let opts = Opts::parse();
 
     let app_config = get_settings()?;
 
@@ -62,30 +65,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let phrases = vec![
-        "Hi?",
-        "How is life you nerd?",
-        "This is me testing things!",
-        "This works so well!",
-    ];
+    if let Some(phrases) = opts.phrases {
+        let phrases = phrases.split(',');
+        for phrase in phrases.into_iter().filter(|text| !text.is_empty()) {
+            s.send(String::from(phrase)).unwrap();
+        }
 
-    for phrase in phrases {
-        s.send(String::from(phrase)).unwrap();
+        println!("Press Enter to exit...");
+        let _ = std::io::stdin().read(&mut [0]).unwrap();
+    } else {
+        // use rest service if no phrases provided
+        let rest_sender = s.clone();
+        let route = warp::path("say")
+            .and(warp::post())
+            .and(warp::body::bytes())
+            .map(move |payload: Bytes| {
+                if let Ok(text) = str::from_utf8(&payload) {
+                    rest_sender.send(text.to_owned()).unwrap();
+                    "Ok\n"
+                } else {
+                    error!("Failed processing rest request");
+                    "Error"
+                }
+            });
+        warp::serve(route).run(([0, 0, 0, 0], 3000)).await;
     }
-
-    let rest_sender = s.clone();
-    let route = warp::path("say")
-        .and(warp::post())
-        .and(warp::body::bytes())
-        .map(move |payload: Bytes| {
-            if let Ok(text) = str::from_utf8(&payload) {
-                rest_sender.send(text.to_owned()).unwrap();
-                "Ok\n"
-            } else {
-                error!("Failed processing rest request");
-                "Error"
-            }
-        });
-    warp::serve(route).run(([0, 0, 0, 0], 3000)).await;
     Ok(())
 }
