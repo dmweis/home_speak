@@ -1,6 +1,7 @@
 use crate::audio_cache::AudioCache;
 use crate::error::{HomeSpeakError, Result};
 use log::*;
+use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::io::Cursor;
 use std::io::{Read, Seek};
@@ -15,15 +16,41 @@ fn hash_google_tts(text: &str, voice: &google_tts::VoiceProps) -> String {
     format!("{:x}", hashed)
 }
 
+fn hash_azure_tts(text: &str, voice: &azure_tts::VoiceSettings) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(text);
+    hasher.update(&voice.name);
+    hasher.update(&voice.language);
+    // Turning it into json to hash is a hack.
+    // TODO: hash the type not the json
+    hasher.update(serde_json::to_string(&voice.gender).unwrap());
+    let hashed = hasher.finalize();
+    format!("{:x}", hashed)
+}
+
+#[derive(Deserialize, Debug, Clone, Copy)]
+pub(crate) enum TtsService {
+    Azure,
+    Google,
+}
+
 pub struct SpeechService {
     google_speech_client: google_tts::GoogleTtsClient,
+    azure_speech_client: azure_tts::VoiceService,
     audio_cache: Option<AudioCache>,
     google_voice: google_tts::VoiceProps,
+    azure_voice: azure_tts::VoiceSettings,
 }
 
 impl SpeechService {
-    pub fn new(google_api_key: String, cache_dir_path: Option<String>) -> Result<SpeechService> {
-        let client = google_tts::GoogleTtsClient::new(google_api_key);
+    pub fn new(
+        google_api_key: String,
+        azure_subscription_key: &str,
+        cache_dir_path: Option<String>,
+    ) -> Result<SpeechService> {
+        let google_speech_client = google_tts::GoogleTtsClient::new(google_api_key);
+        let azure_speech_client =
+            azure_tts::VoiceService::new(azure_subscription_key, azure_tts::Region::uksouth);
 
         let audio_cache = match cache_dir_path {
             Some(path) => Some(AudioCache::new(path)?),
@@ -31,9 +58,11 @@ impl SpeechService {
         };
 
         Ok(SpeechService {
-            google_speech_client: client,
+            google_speech_client,
+            azure_speech_client,
             audio_cache,
             google_voice: google_tts::VoiceProps::default_english_female_wavenet(),
+            azure_voice: azure_tts::VoiceSettings::default_female_jenny(),
         })
     }
 
@@ -99,8 +128,44 @@ impl SpeechService {
         }
     }
 
-    pub(crate) async fn say(&mut self, text: &str) -> Result<()> {
-        self.say_google(text).await?;
+    async fn say_azure(&mut self, text: &str) -> Result<()> {
+        if let Some(audio_cache) = &self.audio_cache {
+            let file_key = hash_azure_tts(text, &self.azure_voice);
+            if let Some(file) = audio_cache.get(&file_key) {
+                info!("Using cached value");
+                self.play(file)?;
+            } else {
+                info!("Writing new file");
+                let data = self
+                    .azure_speech_client
+                    .synthesize(
+                        text,
+                        &self.azure_voice,
+                        azure_tts::AudioFormat::Audio48khz192kbitrateMonoMp3,
+                    )
+                    .await?;
+                audio_cache.set(&file_key, data.clone())?;
+                self.play(Cursor::new(data))?;
+            }
+        } else {
+            let data = self
+                .azure_speech_client
+                .synthesize(
+                    text,
+                    &self.azure_voice,
+                    azure_tts::AudioFormat::Audio48khz192kbitrateMonoMp3,
+                )
+                .await?;
+            self.play(Cursor::new(data))?;
+        }
+        Ok(())
+    }
+
+    pub(crate) async fn say(&mut self, text: &str, service: TtsService) -> Result<()> {
+        match service {
+            TtsService::Azure => self.say_azure(text).await?,
+            TtsService::Google => self.say_google(text).await?,
+        }
         Ok(())
     }
 }

@@ -17,6 +17,7 @@ struct AppConfig {
     google_api_key: String,
     azure_api_key: String,
     cache_dir_path: Option<String>,
+    tts_service: speech_service::TtsService,
 }
 
 fn get_settings() -> Result<AppConfig, Box<dyn std::error::Error>> {
@@ -59,12 +60,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app_config = get_settings()?;
 
     let (s, r) = unbounded::<String>();
-    let mut speech_service =
-        speech_service::SpeechService::new(app_config.google_api_key, app_config.cache_dir_path)?;
+    let mut speech_service = speech_service::SpeechService::new(
+        app_config.google_api_key,
+        &app_config.azure_api_key,
+        app_config.cache_dir_path,
+    )?;
 
     tokio::spawn(async move {
         for msg in r {
-            speech_service.say(&msg).await.unwrap();
+            speech_service
+                .say(&msg, app_config.tts_service)
+                .await
+                .unwrap();
         }
     });
 

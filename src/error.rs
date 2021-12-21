@@ -13,4 +13,6 @@ pub enum HomeSpeakError {
     // TODO: Propagate errors from google_tts
     #[error("google tts failed to synthesize")]
     GoogleTtsError,
+    #[error("azure tts error")]
+    AzureTtsError(#[from] azure_tts::TtsError),
 }
