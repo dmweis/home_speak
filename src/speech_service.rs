@@ -50,7 +50,7 @@ impl SpeechService {
 
     async fn say_google(&self, text: &str) -> Result<()> {
         if let Some(audio_cache) = &self.audio_cache {
-            let file_key = hash_google_tts(&text, &self.voice);
+            let file_key = hash_google_tts(text, &self.voice);
             if let Some(file) = audio_cache.get(&file_key) {
                 info!("Using cached value");
                 self.play(file)?;
