@@ -1,3 +1,5 @@
+mod audio_cache;
+mod error;
 mod speech_service;
 
 use bytes::Bytes;
@@ -13,6 +15,7 @@ use warp::Filter;
 #[derive(Deserialize, Debug, Clone)]
 struct AppConfig {
     google_api_key: String,
+    azure_api_key: String,
     cache_dir_path: Option<String>,
 }
 
@@ -55,20 +58,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app_config = get_settings()?;
 
-    let (s, r) = unbounded();
-    let speech_service =
+    let (s, r) = unbounded::<String>();
+    let mut speech_service =
         speech_service::SpeechService::new(app_config.google_api_key, app_config.cache_dir_path)?;
 
     tokio::spawn(async move {
         for msg in r {
-            speech_service.say(msg).await.unwrap();
+            speech_service.say(&msg).await.unwrap();
         }
     });
 
     if let Some(phrases) = opts.phrases {
         let phrases = phrases.split(',');
         for phrase in phrases.into_iter().filter(|text| !text.is_empty()) {
-            s.send(String::from(phrase)).unwrap();
+            s.send(phrase.to_owned()).unwrap();
         }
 
         println!("Press Enter to exit...");
