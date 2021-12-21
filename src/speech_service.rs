@@ -16,9 +16,9 @@ fn hash_google_tts(text: &str, voice: &google_tts::VoiceProps) -> String {
 }
 
 pub struct SpeechService {
-    speech_client: google_tts::GoogleTtsClient,
+    google_speech_client: google_tts::GoogleTtsClient,
     audio_cache: Option<AudioCache>,
-    voice: google_tts::VoiceProps,
+    google_voice: google_tts::VoiceProps,
 }
 
 impl SpeechService {
@@ -31,9 +31,9 @@ impl SpeechService {
         };
 
         Ok(SpeechService {
-            speech_client: client,
+            google_speech_client: client,
             audio_cache,
-            voice: google_tts::VoiceProps::default_english_female_wavenet(),
+            google_voice: google_tts::VoiceProps::default_english_female_wavenet(),
         })
     }
 
@@ -50,17 +50,17 @@ impl SpeechService {
 
     async fn say_google(&self, text: &str) -> Result<()> {
         if let Some(audio_cache) = &self.audio_cache {
-            let file_key = hash_google_tts(text, &self.voice);
+            let file_key = hash_google_tts(text, &self.google_voice);
             if let Some(file) = audio_cache.get(&file_key) {
                 info!("Using cached value");
                 self.play(file)?;
             } else {
                 info!("Writing new file");
                 let data = self
-                    .speech_client
+                    .google_speech_client
                     .synthesize(
                         google_tts::TextInput::with_text(text.to_owned()),
-                        self.voice.clone(),
+                        self.google_voice.clone(),
                         google_tts::AudioConfig::default_with_encoding(
                             google_tts::AudioEncoding::Mp3,
                         ),
@@ -81,10 +81,10 @@ impl SpeechService {
             Ok(())
         } else {
             let data = self
-                .speech_client
+                .google_speech_client
                 .synthesize(
                     google_tts::TextInput::with_text(text.to_owned()),
-                    self.voice.clone(),
+                    self.google_voice.clone(),
                     google_tts::AudioConfig::default_with_encoding(google_tts::AudioEncoding::Mp3),
                 )
                 .await
