@@ -1,13 +1,13 @@
 mod speech_service;
 
 use bytes::Bytes;
-use clap::Parser;
 use crossbeam_channel::unbounded;
 use log::*;
 use serde::Deserialize;
 use simplelog::*;
 use std::io::Read;
 use std::str;
+use structopt::StructOpt;
 use warp::Filter;
 
 #[derive(Deserialize, Debug, Clone)]
@@ -25,14 +25,14 @@ fn get_settings() -> Result<AppConfig, Box<dyn std::error::Error>> {
     Ok(settings.try_into()?)
 }
 
-#[derive(Parser)]
-#[clap(
+#[derive(StructOpt, Debug)]
+#[structopt(
     version = "0.1.0",
     author = "David M. Weis <dweis7@gmail.com>",
     about = "CLI tool for playing text to speech commands using Google text to speech cloud API"
 )]
 struct Opts {
-    #[clap(short, long)]
+    #[structopt(short, long)]
     phrases: Option<String>,
 }
 
@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             eprintln!("Failed to create simple logger");
         }
     }
-    let opts = Opts::parse();
+    let opts = Opts::from_args();
 
     let app_config = get_settings()?;
 
