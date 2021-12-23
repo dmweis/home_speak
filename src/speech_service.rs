@@ -25,7 +25,7 @@ fn hash_azure_tts(text: &str, voice: &azure_tts::VoiceSettings) -> String {
     // TODO: hash the type not the json
     hasher.update(serde_json::to_string(&voice.gender).unwrap());
     let hashed = hasher.finalize();
-    format!("{:x}", hashed)
+    format!("{}-{:x}", voice.name, hashed)
 }
 
 #[derive(Deserialize, Debug, Clone, Copy)]
@@ -62,7 +62,7 @@ impl SpeechService {
             azure_speech_client,
             audio_cache,
             google_voice: google_tts::VoiceProps::default_english_female_wavenet(),
-            azure_voice: azure_tts::VoiceSettings::default_female_jenny(),
+            azure_voice: azure_tts::EnUsVoices::SaraNeural.to_voice_settings(),
         })
     }
 
@@ -165,6 +165,34 @@ impl SpeechService {
         match service {
             TtsService::Azure => self.say_azure(text).await?,
             TtsService::Google => self.say_google(text).await?,
+        }
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    pub(crate) async fn sample_azure_languages(&mut self, text: &str) -> Result<()> {
+        let languages = self.azure_speech_client.list_voices().await?;
+        for language in languages {
+            if language.locale == "en-US" {
+                println!(
+                    "Lang name {} locale {}",
+                    language.short_name, language.locale
+                );
+                let voice_settings = language.to_voice_settings();
+                let data = self
+                    .azure_speech_client
+                    .synthesize(
+                        text,
+                        &voice_settings,
+                        azure_tts::AudioFormat::Audio48khz192kbitrateMonoMp3,
+                    )
+                    .await?;
+                let file_key = hash_azure_tts(text, &voice_settings);
+                if let Some(audio_cache) = &self.audio_cache {
+                    audio_cache.set(&file_key, data.clone())?;
+                }
+                self.play(Cursor::new(data))?;
+            }
         }
         Ok(())
     }
