@@ -532,7 +532,7 @@ checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 [[package]]
 name = "google_tts"
 version = "0.1.0"
-source = "git+https://github.com/dmweis/google_tts?branch=main#576f1c382ae9c51c8263bfeb5db5827e1194efe6"
+source = "git+https://github.com/dmweis/google_tts?branch=main#b53fcbee4a3da7a56a3bfbbe53cd98149aae8dfb"
 dependencies = [
  "base64",
  "reqwest",

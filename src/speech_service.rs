@@ -13,7 +13,14 @@ fn hash_google_tts(text: &str, voice: &google_tts::VoiceProps) -> String {
     // TODO: hash the type not the json
     hasher.update(serde_json::to_string(voice).unwrap());
     let hashed = hasher.finalize();
-    format!("{:x}", hashed)
+    format!(
+        "{}-{:x}",
+        voice
+            .name
+            .to_owned()
+            .unwrap_or_else(|| String::from("Unknown")),
+        hashed
+    )
 }
 
 fn hash_azure_tts(text: &str, voice: &azure_tts::VoiceSettings) -> String {
