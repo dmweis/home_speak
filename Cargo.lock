@@ -68,7 +68,7 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 [[package]]
 name = "azure_tts"
 version = "0.1.0"
-source = "git+https://github.com/dmweis/azure_tts?branch=main#116c90c620efc1ed7c7db13930301dbe1f94a411"
+source = "git+https://github.com/dmweis/azure_tts?branch=main#b1cb2d9fd4917b166156140865c19f35e6b4d223"
 dependencies = [
  "bytes",
  "quick-xml",
@@ -1392,9 +1392,8 @@ checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 
 [[package]]
 name = "quick-xml"
-version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8533f14c8382aaad0d592c812ac3b826162128b65662331e1127b45c3d18536b"
+version = "0.23.0-alpha3"
+source = "git+https://github.com/tafia/quick-xml?rev=d8727717fb062a2b2d31ce748959220a28da9f32#d8727717fb062a2b2d31ce748959220a28da9f32"
 dependencies = [
  "memchr",
  "serde 1.0.132",
