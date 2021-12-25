@@ -8,7 +8,13 @@ Play messages submitted over MQTT or REST api into voice using google text to sp
 
 ## API token
 
+### Google
+
 You should be able to create API token for your google account [here](https://console.developers.google.com/apis/credentials)
+
+### Azure
+
+Generate tokens using your [Azure portal](https://portal.azure.com)
 
 ## Simple curl call
 
