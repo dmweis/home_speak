@@ -68,7 +68,7 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 [[package]]
 name = "azure_tts"
 version = "0.1.0"
-source = "git+https://github.com/dmweis/azure_tts?branch=main#b1cb2d9fd4917b166156140865c19f35e6b4d223"
+source = "git+https://github.com/dmweis/azure_tts?branch=main#9bdb3d594c02edc581fb0c3aafeadf35326ca6a8"
 dependencies = [
  "bytes",
  "quick-xml",
