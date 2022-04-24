@@ -164,7 +164,11 @@ impl SpeechService {
         Ok(())
     }
 
-    async fn say_azure(&mut self, text: &str) -> Result<()> {
+    async fn say_azure_with_voice(
+        &mut self,
+        text: &str,
+        voice: &azure_tts::VoiceSettings,
+    ) -> Result<()> {
         let segments = vec![
             azure_tts::VoiceSegment::silence(
                 azure_tts::SilenceAttributeType::Sentenceboundary,
@@ -182,7 +186,7 @@ impl SpeechService {
         ];
 
         let sound: Box<dyn PlayAble> = if let Some(ref audio_cache) = self.audio_cache {
-            let file_key = hash_azure_tts(text, &self.azure_voice, self.azure_audio_format);
+            let file_key = hash_azure_tts(text, voice, self.azure_audio_format);
             if let Some(file) = audio_cache.get(&file_key) {
                 info!("Using cached value");
                 file
@@ -190,7 +194,7 @@ impl SpeechService {
                 info!("Writing new file");
                 let data = self
                     .azure_speech_client
-                    .synthesize_segments(segments, &self.azure_voice, self.azure_audio_format)
+                    .synthesize_segments(segments, voice, self.azure_audio_format)
                     .await?;
                 audio_cache.set(&file_key, data.clone())?;
                 Box::new(Cursor::new(data))
@@ -198,12 +202,18 @@ impl SpeechService {
         } else {
             let data = self
                 .azure_speech_client
-                .synthesize_segments(segments, &self.azure_voice, self.azure_audio_format)
+                .synthesize_segments(segments, voice, self.azure_audio_format)
                 .await?;
             Box::new(Cursor::new(data))
         };
         self.play(sound).await?;
         Ok(())
+    }
+
+    async fn say_azure(&mut self, text: &str) -> Result<()> {
+        // This cloning here is lame...
+        self.say_azure_with_voice(text, &self.azure_voice.clone())
+            .await
     }
 
     pub async fn say(&mut self, text: &str, service: TtsService) -> Result<()> {
@@ -222,21 +232,9 @@ impl SpeechService {
                     "Lang name {} locale {}",
                     language.short_name, language.locale
                 );
-                let message = format!("Voice name is {}. {}", language.display_name, text);
+                let message = format!("Hey, my name is {} and {}", language.display_name, text);
                 let voice_settings = language.to_voice_settings();
-                let data = self
-                    .azure_speech_client
-                    .synthesize(
-                        &message,
-                        &voice_settings,
-                        azure_tts::AudioFormat::Audio48khz192kbitrateMonoMp3,
-                    )
-                    .await?;
-                let file_key = hash_azure_tts(text, &voice_settings, self.azure_audio_format);
-                if let Some(audio_cache) = &self.audio_cache {
-                    audio_cache.set(&file_key, data.clone())?;
-                }
-                self.play(Cursor::new(data)).await?;
+                self.say_azure_with_voice(&message, &voice_settings).await?;
             }
         }
         Ok(())
