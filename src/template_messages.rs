@@ -67,9 +67,9 @@ fn human_current_time() -> String {
     let local: chrono::DateTime<chrono::Local> = chrono::Local::now();
 
     format!(
-        "Currently it is {}th of {:?}, {} at {}:{}. ",
+        "Currently it is {} of {:?}, {} at {}:{}. ",
         local.day(),
-        Month::from_u32(local.month()),
+        Month::from_u32(local.month()).unwrap(),
         local.year(),
         local.hour(),
         local.minute()
