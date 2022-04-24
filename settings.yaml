@@ -1,3 +1,0 @@
-cache_dir_path: "audio_cache"
-tts_service: "Azure"
-# tts_service: "Google"
