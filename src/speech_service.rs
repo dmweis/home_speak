@@ -1,6 +1,7 @@
 use crate::audio_cache::AudioCache;
 use crate::error::{HomeSpeakError, Result};
 use log::*;
+use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::io::Cursor;
@@ -57,13 +58,16 @@ pub struct SpeechService {
 
 impl SpeechService {
     pub fn new(
-        google_api_key: String,
-        azure_subscription_key: &str,
+        google_api_key: Secret<String>,
+        azure_subscription_key: Secret<String>,
         cache_dir_path: Option<String>,
     ) -> Result<SpeechService> {
-        let google_speech_client = google_tts::GoogleTtsClient::new(google_api_key);
-        let azure_speech_client =
-            azure_tts::VoiceService::new(azure_subscription_key, azure_tts::Region::uksouth);
+        let google_speech_client =
+            google_tts::GoogleTtsClient::new(google_api_key.expose_secret().to_owned());
+        let azure_speech_client = azure_tts::VoiceService::new(
+            azure_subscription_key.expose_secret(),
+            azure_tts::Region::uksouth,
+        );
 
         let audio_cache = match cache_dir_path {
             Some(path) => Some(AudioCache::new(path)?),

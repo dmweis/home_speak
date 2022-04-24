@@ -27,3 +27,4 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 chrono = "0.4.19"
 num-traits = "0.2.14"
 ordinal = "0.3.1"
+secrecy = { version = "0.8", features = ["serde"] }

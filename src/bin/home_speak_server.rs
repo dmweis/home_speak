@@ -50,12 +50,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app_config = get_configuration(opts.config)?;
 
     let speech_service = SpeechService::new(
-        app_config.google_api_key,
-        &app_config.azure_api_key,
-        app_config.cache_dir_path,
+        app_config.tts_service_config.google_api_key,
+        app_config.tts_service_config.azure_api_key,
+        app_config.tts_service_config.cache_dir_path,
     )?;
 
-    let speech_service_handle = start_speech_service_worker(speech_service, app_config.tts_service);
+    let speech_service_handle =
+        start_speech_service_worker(speech_service, app_config.tts_service_config.tts_service);
 
     let startup_message = generate_startup_message();
 
@@ -63,13 +64,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let speech_service_handle = web::Data::new(speech_service_handle);
 
+    let address = format!(
+        "{}:{}",
+        app_config.server_config.host, app_config.server_config.port
+    );
+
+    speech_service_handle.say(&format!(
+        "I am reachable on port {}",
+        app_config.server_config.port
+    ));
+
     HttpServer::new(move || {
         App::new()
             .service(intro_handler)
             .service(say_handler)
             .app_data(speech_service_handle.clone())
     })
-    .bind(("0.0.0.0", 3000))?
+    .bind(address)?
     .run()
     .await?;
     Ok(())

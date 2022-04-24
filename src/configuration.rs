@@ -1,5 +1,6 @@
 use crate::speech_service::TtsService;
 use log::*;
+use secrecy::Secret;
 use serde::Deserialize;
 use std::{path::PathBuf, str};
 
@@ -26,8 +27,20 @@ pub fn get_configuration(config: Option<PathBuf>) -> Result<AppConfig, Box<dyn s
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct AppConfig {
-    pub google_api_key: String,
-    pub azure_api_key: String,
+    pub tts_service_config: TtsServiceConfig,
+    pub server_config: ServerConfig,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct TtsServiceConfig {
+    pub google_api_key: Secret<String>,
+    pub azure_api_key: Secret<String>,
     pub cache_dir_path: Option<String>,
     pub tts_service: TtsService,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct ServerConfig {
+    pub host: String,
+    pub port: u16,
 }

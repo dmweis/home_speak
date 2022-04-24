@@ -29,12 +29,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app_config = get_configuration(opts.config)?;
 
     let speech_service = SpeechService::new(
-        app_config.google_api_key,
-        &app_config.azure_api_key,
-        app_config.cache_dir_path,
+        app_config.tts_service_config.google_api_key,
+        app_config.tts_service_config.azure_api_key,
+        app_config.tts_service_config.cache_dir_path,
     )?;
 
-    let speech_service_handle = start_speech_service_worker(speech_service, app_config.tts_service);
+    let speech_service_handle =
+        start_speech_service_worker(speech_service, app_config.tts_service_config.tts_service);
 
     let phrases = opts.phrases.split(',');
     for phrase in phrases.into_iter().filter(|text| !text.is_empty()) {
