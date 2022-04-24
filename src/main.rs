@@ -153,5 +153,5 @@ fn hostname() -> String {
 
 #[cfg(not(target_os = "linux"))]
 fn hostname() -> String {
-    String::from("Unavailable")
+    String::from("Unavailable on this platform")
 }
