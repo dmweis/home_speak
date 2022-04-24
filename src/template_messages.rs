@@ -6,39 +6,44 @@ use ordinal::Ordinal;
 use std::process::Command;
 use std::str;
 
-pub fn generate_startup_message(port: u16) -> String {
-    let mut message_buffer = String::new();
-    message_buffer.push_str("Good morning, my name is Joy! ");
-    message_buffer.push_str(&format!("It's {}. ", human_current_date_time()));
+pub fn generate_startup_message(port: u16) -> Vec<String> {
+    let mut message_buffer = vec![];
+    message_buffer.push(String::from("Good morning, my name is Joy!"));
+    message_buffer.push(format!("It's {}. ", human_current_date_time()));
     // TODO(David): Extract this
     // probably use some templating engine too
     if let Ok(network_interfaces) = list_afinet_netifas() {
         if network_interfaces.is_empty() {
             error!("No NICs found");
-            message_buffer.push_str("Huh, It looks like this device has no network interfaces? ")
+            message_buffer.push(String::from(
+                "Huh, It looks like this device has no network interfaces?",
+            ))
         } else {
-            message_buffer.push_str("My network interfaces are ");
+            let mut network_message = String::new();
+            network_message.push_str("My network interfaces are ");
             let interface_message: String = network_interfaces
                 .iter()
                 .filter(|(_, ip)| ip.is_ipv4() && !ip.is_loopback())
                 .map(|(name, ip)| format!("{} at {}, ", name, ip))
                 .collect();
             info!("local interfaces are: {:?}", interface_message);
-            message_buffer.push_str(interface_message.trim_end_matches(", "));
-            message_buffer.push_str(". ");
+            network_message.push_str(interface_message.trim_end_matches(", "));
+            network_message.push('.');
+            message_buffer.push(network_message);
         }
     } else {
         error!("Failed to query local network interfaces");
-        message_buffer.push_str("I can't tell you how to reach me because it looks like I failed to query the local interfaces for some reason. ");
+        message_buffer.push(String::from("I can't tell you how to reach me because it looks like I failed to query the local interfaces for some reason."));
     }
 
     if let Some(hostname) = hostname() {
-        message_buffer.push_str(&format!("My hostname is {}. ", hostname));
+        message_buffer.push(format!("My hostname is {}. ", hostname));
     } else {
-        message_buffer
-            .push_str("I can't detect my hostname. Maybe this platform isn't supported? ");
+        message_buffer.push(String::from(
+            "I can't detect my hostname. Maybe this platform isn't supported?",
+        ));
     }
-    message_buffer.push_str(&format!("My server is running on port {}. ", port));
+    message_buffer.push(format!("My server is running on port {}. ", port));
 
     message_buffer
 }

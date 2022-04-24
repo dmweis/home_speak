@@ -1,5 +1,6 @@
 use crate::audio_cache::AudioCache;
 use crate::error::{HomeSpeakError, Result};
+use azure_tts::VoiceSegment;
 use log::*;
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
@@ -26,6 +27,9 @@ fn hash_google_tts(text: &str, voice: &google_tts::VoiceProps) -> String {
     )
 }
 
+// Used to invalidate old cache
+const AZURE_FORMAT_VERSION: u32 = 2;
+
 fn hash_azure_tts(
     text: &str,
     voice: &azure_tts::VoiceSettings,
@@ -36,6 +40,7 @@ fn hash_azure_tts(
     hasher.update(&voice.name);
     hasher.update(&voice.language);
     hasher.update(format.as_string());
+    hasher.update(AZURE_FORMAT_VERSION.to_be_bytes());
     // Turning it into json to hash is a hack.
     // TODO: hash the type not the json
     hasher.update(serde_json::to_string(&voice.gender).unwrap());
@@ -160,15 +165,32 @@ impl SpeechService {
     }
 
     async fn say_azure(&mut self, text: &str) -> Result<()> {
+        let segments = vec![
+            azure_tts::VoiceSegment::silence(
+                azure_tts::SilenceAttributeType::Sentenceboundary,
+                "50ms".to_owned(),
+            ),
+            azure_tts::VoiceSegment::silence(
+                azure_tts::SilenceAttributeType::Tailing,
+                "25ms".to_owned(),
+            ),
+            azure_tts::VoiceSegment::silence(
+                azure_tts::SilenceAttributeType::Leading,
+                "25ms".to_owned(),
+            ),
+            VoiceSegment::plain(text),
+        ];
+
         let sound: Box<dyn PlayAble> = if let Some(ref audio_cache) = self.audio_cache {
             let file_key = hash_azure_tts(text, &self.azure_voice, self.azure_audio_format);
             if let Some(file) = audio_cache.get(&file_key) {
+                info!("Using cached value");
                 file
             } else {
                 info!("Writing new file");
                 let data = self
                     .azure_speech_client
-                    .synthesize(text, &self.azure_voice, self.azure_audio_format)
+                    .synthesize_segments(segments, &self.azure_voice, self.azure_audio_format)
                     .await?;
                 audio_cache.set(&file_key, data.clone())?;
                 Box::new(Cursor::new(data))
@@ -176,7 +198,7 @@ impl SpeechService {
         } else {
             let data = self
                 .azure_speech_client
-                .synthesize(text, &self.azure_voice, self.azure_audio_format)
+                .synthesize_segments(segments, &self.azure_voice, self.azure_audio_format)
                 .await?;
             Box::new(Cursor::new(data))
         };

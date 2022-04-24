@@ -44,7 +44,9 @@ async fn intro_handler(
     port: web::Data<BoundPort>,
 ) -> impl Responder {
     let startup_message = generate_startup_message(port.0);
-    speech_service_handle.say(&startup_message);
+    for message_part in startup_message {
+        speech_service_handle.say(&message_part);
+    }
     HttpResponse::Ok().finish()
 }
 
@@ -89,7 +91,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if !app_config.skip_intro {
         let startup_message = generate_startup_message(app_config.server_config.port);
-        speech_service_handle.say(&startup_message);
+        for message_part in startup_message {
+            speech_service_handle.say(&message_part);
+        }
     }
 
     let speech_service_handle = web::Data::new(speech_service_handle);
