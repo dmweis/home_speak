@@ -17,18 +17,22 @@ cargo install --path .
 
 mkdir -p /home/$(whoami)/.config/home_speak
 touch /home/$(whoami)/.config/home_speak/settings.yaml
-cat "cache_dir_path: \"/home/$(whoami)/.cache/home_speak\"" >> /home/$(whoami)/.config/home_speak/settings.yaml
+echo "cache_dir_path: \"/home/$(whoami)/.cache/home_speak\"" >> /home/$(whoami)/.config/home_speak/settings.yaml
 
 
 cat <<EOT | sudo tee /etc/systemd/system/home_speak.service > /dev/null
 [Unit]
 Description=Home Speak
+After=network-online.target nss-lookup.target
+Wants=network-online.target
+
 [Service]
 User=$(whoami)
 Type=simple
 Restart=on-failure
 RestartSec=5s
 ExecStart=/home/$(whoami)/.cargo/bin/home_speak --config /home/$(whoami)/.config/home_speak/settings
+
 [Install]
 WantedBy=default.target
 EOT
