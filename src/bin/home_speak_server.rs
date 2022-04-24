@@ -2,7 +2,7 @@ use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
 use crossbeam_channel::{unbounded, Sender};
 use home_speak::{
     configuration::get_configuration,
-    speech_service::{SpeechService, TtsService},
+    speech_service::{AzureVoiceStyle, SpeechService, TtsService},
     template_messages::{generate_startup_message, human_current_time},
 };
 use log::*;
@@ -17,6 +17,21 @@ async fn say_handler(
 ) -> impl Responder {
     if let Ok(text) = str::from_utf8(&body) {
         speech_service_handle.say(text);
+        HttpResponse::Ok().finish()
+    } else {
+        error!("Failed processing rest request");
+        HttpResponse::BadRequest().finish()
+    }
+}
+
+// simple way to do this with no body
+#[post("/say_angry")]
+async fn say_angry_handler(
+    body: web::Bytes,
+    speech_service_handle: web::Data<SpeechServiceHandle>,
+) -> impl Responder {
+    if let Ok(text) = str::from_utf8(&body) {
+        speech_service_handle.say_with_style(text, AzureVoiceStyle::Angry);
         HttpResponse::Ok().finish()
     } else {
         error!("Failed processing rest request");
@@ -111,6 +126,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .service(say_handler)
             .service(current_time_handler)
             .service(sample_azure_languages_handler)
+            .service(say_angry_handler)
             .app_data(speech_service_handle.clone())
             .app_data(port)
     })
@@ -127,6 +143,7 @@ struct SpeechServiceHandle {
 
 enum SpeechServiceMessage {
     Simple(String),
+    WithStyle(String, AzureVoiceStyle),
     AzureVoiceSampling(String),
 }
 
@@ -134,6 +151,12 @@ impl SpeechServiceHandle {
     pub fn say(&self, phrase: &str) {
         self.sender
             .send(SpeechServiceMessage::Simple(phrase.to_owned()))
+            .expect("Speech service send failed");
+    }
+
+    pub fn say_with_style(&self, phrase: &str, style: AzureVoiceStyle) {
+        self.sender
+            .send(SpeechServiceMessage::WithStyle(phrase.to_owned(), style))
             .expect("Speech service send failed");
     }
 
@@ -158,6 +181,14 @@ fn start_speech_service_worker(
             match msg {
                 SpeechServiceMessage::Simple(message) => {
                     if let Err(e) = speech_service.say(&message, tts_service).await {
+                        error!("Speech service error {}", e);
+                    }
+                }
+                SpeechServiceMessage::WithStyle(message, style) => {
+                    if let Err(e) = speech_service
+                        .say_azure_with_feelings(&message, style)
+                        .await
+                    {
                         error!("Speech service error {}", e);
                     }
                 }

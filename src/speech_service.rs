@@ -28,7 +28,7 @@ fn hash_google_tts(text: &str, voice: &google_tts::VoiceProps) -> String {
 }
 
 // Used to invalidate old cache
-const AZURE_FORMAT_VERSION: u32 = 2;
+const AZURE_FORMAT_VERSION: u32 = 200;
 
 fn hash_azure_tts(
     text: &str,
@@ -52,6 +52,16 @@ fn hash_azure_tts(
 pub enum TtsService {
     Azure,
     Google,
+}
+
+// These are styles that apply to en-US-SaraNeural
+// since that's the most used voice
+#[derive(Debug, Clone, Copy)]
+pub enum AzureVoiceStyle {
+    Plain,
+    Angry,
+    Cheerful,
+    Sad,
 }
 
 pub struct SpeechService {
@@ -168,8 +178,9 @@ impl SpeechService {
         &mut self,
         text: &str,
         voice: &azure_tts::VoiceSettings,
+        style: AzureVoiceStyle,
     ) -> Result<()> {
-        let segments = vec![
+        let mut segments = vec![
             azure_tts::VoiceSegment::silence(
                 azure_tts::SilenceAttributeType::Sentenceboundary,
                 "50ms".to_owned(),
@@ -182,8 +193,16 @@ impl SpeechService {
                 azure_tts::SilenceAttributeType::Leading,
                 "25ms".to_owned(),
             ),
-            VoiceSegment::plain(text),
         ];
+        let contents = match style {
+            AzureVoiceStyle::Plain => VoiceSegment::plain(text),
+            AzureVoiceStyle::Angry => VoiceSegment::with_expression(text, azure_tts::Style::Angry),
+            AzureVoiceStyle::Sad => VoiceSegment::with_expression(text, azure_tts::Style::Sad),
+            AzureVoiceStyle::Cheerful => {
+                VoiceSegment::with_expression(text, azure_tts::Style::Cheerful)
+            }
+        };
+        segments.push(contents);
 
         let sound: Box<dyn PlayAble> = if let Some(ref audio_cache) = self.audio_cache {
             let file_key = hash_azure_tts(text, voice, self.azure_audio_format);
@@ -210,9 +229,19 @@ impl SpeechService {
         Ok(())
     }
 
-    async fn say_azure(&mut self, text: &str) -> Result<()> {
+    pub async fn say_azure(&mut self, text: &str) -> Result<()> {
         // This cloning here is lame...
-        self.say_azure_with_voice(text, &self.azure_voice.clone())
+        self.say_azure_with_voice(text, &self.azure_voice.clone(), AzureVoiceStyle::Plain)
+            .await
+    }
+
+    pub async fn say_azure_with_feelings(
+        &mut self,
+        text: &str,
+        style: AzureVoiceStyle,
+    ) -> Result<()> {
+        // This cloning here is lame...
+        self.say_azure_with_voice(text, &self.azure_voice.clone(), style)
             .await
     }
 
@@ -234,7 +263,8 @@ impl SpeechService {
                 );
                 let message = format!("Hey, my name is {} and {}", language.display_name, text);
                 let voice_settings = language.to_voice_settings();
-                self.say_azure_with_voice(&message, &voice_settings).await?;
+                self.say_azure_with_voice(&message, &voice_settings, AzureVoiceStyle::Plain)
+                    .await?;
             }
         }
         Ok(())
