@@ -1,38 +1,12 @@
 use crossbeam_channel::{unbounded, Sender};
-use home_speak::speech_service::{SpeechService, TtsService};
+use home_speak::{
+    configuration::get_configuration,
+    speech_service::{SpeechService, TtsService},
+};
 use log::*;
-use serde::Deserialize;
 use simplelog::*;
 use std::{io::Read, path::PathBuf, str};
 use structopt::StructOpt;
-
-#[derive(Deserialize, Debug, Clone)]
-struct AppConfig {
-    google_api_key: String,
-    azure_api_key: String,
-    cache_dir_path: Option<String>,
-    tts_service: TtsService,
-}
-
-fn get_settings(config: Option<PathBuf>) -> Result<AppConfig, Box<dyn std::error::Error>> {
-    let mut settings = config::Config::default();
-
-    if let Some(config) = config {
-        info!("Using configuration from {:?}", config);
-        settings.merge(config::File::with_name(
-            config.to_str().ok_or("Failed to convert path")?,
-        ))?;
-    } else {
-        info!("Using default configuration");
-        settings
-            .merge(config::File::with_name("settings"))?
-            .merge(config::File::with_name("dev_settings"))?;
-    }
-
-    settings.merge(config::Environment::with_prefix("APP"))?;
-
-    Ok(settings.try_into()?)
-}
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -52,7 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logging();
     let opts = Opts::from_args();
 
-    let app_config = get_settings(opts.config)?;
+    let app_config = get_configuration(opts.config)?;
 
     let speech_service = SpeechService::new(
         app_config.google_api_key,
