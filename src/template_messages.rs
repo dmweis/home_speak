@@ -17,7 +17,7 @@ pub fn generate_startup_message(port: u16) -> String {
             error!("No NICs found");
             message_buffer.push_str("Huh, It looks like this device has no network interfaces? ")
         } else {
-            message_buffer.push_str("I am detecting the following network interfaces: ");
+            message_buffer.push_str("My network interfaces are ");
             let interface_message: String = network_interfaces
                 .iter()
                 .filter(|(_, ip)| ip.is_ipv4() && !ip.is_loopback())
@@ -38,7 +38,7 @@ pub fn generate_startup_message(port: u16) -> String {
         message_buffer
             .push_str("I can't detect my hostname. Maybe this platform isn't supported? ");
     }
-    message_buffer.push_str(&format!("My http server is running on port {}", port));
+    message_buffer.push_str(&format!("My server is running on port {}. ", port));
 
     message_buffer
 }
