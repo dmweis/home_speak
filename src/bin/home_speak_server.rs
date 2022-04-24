@@ -25,11 +25,17 @@ async fn say_handler(
 }
 
 #[post("/intro")]
-async fn intro_handler(speech_service_handle: web::Data<SpeechServiceHandle>) -> impl Responder {
-    let startup_message = generate_startup_message();
+async fn intro_handler(
+    speech_service_handle: web::Data<SpeechServiceHandle>,
+    port: web::Data<BoundPort>,
+) -> impl Responder {
+    let startup_message = generate_startup_message(port.0);
     speech_service_handle.say(&startup_message);
     HttpResponse::Ok().finish()
 }
+
+#[derive(Debug, Clone, Copy)]
+struct BoundPort(u16);
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -58,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let speech_service_handle =
         start_speech_service_worker(speech_service, app_config.tts_service_config.tts_service);
 
-    let startup_message = generate_startup_message();
+    let startup_message = generate_startup_message(app_config.server_config.port);
 
     speech_service_handle.say(&startup_message);
 
@@ -69,16 +75,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         app_config.server_config.host, app_config.server_config.port
     );
 
-    speech_service_handle.say(&format!(
-        "I am reachable on port {}",
-        app_config.server_config.port
-    ));
-
     HttpServer::new(move || {
+        let port = web::Data::new(BoundPort(app_config.server_config.port));
+
         App::new()
             .service(intro_handler)
             .service(say_handler)
             .app_data(speech_service_handle.clone())
+            .app_data(port)
     })
     .bind(address)?
     .run()

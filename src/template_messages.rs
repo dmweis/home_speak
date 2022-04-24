@@ -6,7 +6,7 @@ use ordinal::Ordinal;
 use std::process::Command;
 use std::str;
 
-pub fn generate_startup_message() -> String {
+pub fn generate_startup_message(port: u16) -> String {
     let mut message_buffer = String::new();
     message_buffer.push_str("Good morning, my name is Joy! ");
     message_buffer.push_str(&human_current_time());
@@ -38,6 +38,7 @@ pub fn generate_startup_message() -> String {
         message_buffer
             .push_str("I can't detect my hostname. Maybe this platform isn't supported? ");
     }
+    message_buffer.push_str(&format!("My http server is running on port {}", port));
 
     message_buffer
 }
