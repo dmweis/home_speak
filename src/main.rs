@@ -7,8 +7,7 @@ use crossbeam_channel::unbounded;
 use log::*;
 use serde::Deserialize;
 use simplelog::*;
-use std::io::Read;
-use std::str;
+use std::{io::Read, path::PathBuf, str};
 use structopt::StructOpt;
 use warp::Filter;
 
@@ -20,12 +19,23 @@ struct AppConfig {
     tts_service: speech_service::TtsService,
 }
 
-fn get_settings() -> Result<AppConfig, Box<dyn std::error::Error>> {
+fn get_settings(config: Option<PathBuf>) -> Result<AppConfig, Box<dyn std::error::Error>> {
     let mut settings = config::Config::default();
-    settings
-        .merge(config::File::with_name("settings"))?
-        .merge(config::File::with_name("dev_settings"))?
-        .merge(config::Environment::with_prefix("APP"))?;
+
+    if let Some(config) = config {
+        info!("Using configuration from {:?}", config);
+        settings.merge(config::File::with_name(
+            config.to_str().ok_or("Failed to convert path")?,
+        ))?;
+    } else {
+        info!("Using default configuration");
+        settings
+            .merge(config::File::with_name("settings"))?
+            .merge(config::File::with_name("dev_settings"))?;
+    }
+
+    settings.merge(config::Environment::with_prefix("APP"))?;
+
     Ok(settings.try_into()?)
 }
 
@@ -38,6 +48,8 @@ fn get_settings() -> Result<AppConfig, Box<dyn std::error::Error>> {
 struct Opts {
     #[structopt(short, long)]
     phrases: Option<String>,
+    #[structopt(long)]
+    config: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -57,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let opts = Opts::from_args();
 
-    let app_config = get_settings()?;
+    let app_config = get_settings(opts.config)?;
 
     let (s, r) = unbounded::<String>();
     let mut speech_service = speech_service::SpeechService::new(
