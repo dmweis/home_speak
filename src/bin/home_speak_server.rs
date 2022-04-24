@@ -24,6 +24,20 @@ async fn say_handler(
     }
 }
 
+#[post("/sample_azure_languages")]
+async fn sample_azure_languages_handler(
+    body: web::Bytes,
+    speech_service_handle: web::Data<SpeechServiceHandle>,
+) -> impl Responder {
+    if let Ok(text) = str::from_utf8(&body) {
+        speech_service_handle.sample_azure_languages(text);
+        HttpResponse::Ok().finish()
+    } else {
+        error!("Failed processing rest request");
+        HttpResponse::BadRequest().finish()
+    }
+}
+
 #[post("/intro")]
 async fn intro_handler(
     speech_service_handle: web::Data<SpeechServiceHandle>,
@@ -92,6 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .service(intro_handler)
             .service(say_handler)
             .service(current_time_handler)
+            .service(sample_azure_languages_handler)
             .app_data(speech_service_handle.clone())
             .app_data(port)
     })
@@ -103,13 +118,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[derive(Debug, Clone)]
 struct SpeechServiceHandle {
-    sender: Sender<String>,
+    sender: Sender<SpeechServiceMessage>,
+}
+
+enum SpeechServiceMessage {
+    Simple(String),
+    AzureVoiceSampling(String),
 }
 
 impl SpeechServiceHandle {
     pub fn say(&self, phrase: &str) {
         self.sender
-            .send(phrase.to_owned())
+            .send(SpeechServiceMessage::Simple(phrase.to_owned()))
+            .expect("Speech service send failed");
+    }
+
+    pub fn sample_azure_languages(&self, phrase: &str) {
+        self.sender
+            .send(SpeechServiceMessage::AzureVoiceSampling(phrase.to_owned()))
             .expect("Speech service send failed");
     }
 }
@@ -118,12 +144,24 @@ fn start_speech_service_worker(
     mut speech_service: SpeechService,
     tts_service: TtsService,
 ) -> SpeechServiceHandle {
-    let (sender, r) = unbounded::<String>();
+    let (sender, r) = unbounded::<SpeechServiceMessage>();
 
     tokio::spawn(async move {
         for msg in r {
-            if let Err(e) = speech_service.say(&msg, tts_service).await {
-                error!("Speech service error {}", e);
+            // speech is actually partially blocking
+            // thought it doesn't have to be. It's just because of how we handle
+            // waiting until a sample is done playing
+            match msg {
+                SpeechServiceMessage::Simple(message) => {
+                    if let Err(e) = speech_service.say(&message, tts_service).await {
+                        error!("Speech service error {}", e);
+                    }
+                }
+                SpeechServiceMessage::AzureVoiceSampling(message) => {
+                    if let Err(e) = speech_service.sample_azure_languages(&message).await {
+                        error!("Speech service error {}", e);
+                    }
+                }
             }
         }
     });
