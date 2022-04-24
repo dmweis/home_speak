@@ -39,6 +39,34 @@ async fn say_angry_handler(
     }
 }
 
+#[post("/say_sad")]
+async fn say_sad_handler(
+    body: web::Bytes,
+    speech_service_handle: web::Data<SpeechServiceHandle>,
+) -> impl Responder {
+    if let Ok(text) = str::from_utf8(&body) {
+        speech_service_handle.say_with_style(text, AzureVoiceStyle::Sad);
+        HttpResponse::Ok().finish()
+    } else {
+        error!("Failed processing rest request");
+        HttpResponse::BadRequest().finish()
+    }
+}
+
+#[post("/say_cheerful")]
+async fn say_cheerful_handler(
+    body: web::Bytes,
+    speech_service_handle: web::Data<SpeechServiceHandle>,
+) -> impl Responder {
+    if let Ok(text) = str::from_utf8(&body) {
+        speech_service_handle.say_with_style(text, AzureVoiceStyle::Cheerful);
+        HttpResponse::Ok().finish()
+    } else {
+        error!("Failed processing rest request");
+        HttpResponse::BadRequest().finish()
+    }
+}
+
 #[post("/sample_azure_languages")]
 async fn sample_azure_languages_handler(
     body: web::Bytes,
@@ -127,6 +155,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .service(current_time_handler)
             .service(sample_azure_languages_handler)
             .service(say_angry_handler)
+            .service(say_cheerful_handler)
+            .service(say_sad_handler)
             .app_data(speech_service_handle.clone())
             .app_data(port)
     })

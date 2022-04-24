@@ -131,10 +131,10 @@ impl SpeechService {
         let playable: Box<dyn PlayAble> = if let Some(audio_cache) = &self.audio_cache {
             let file_key = hash_google_tts(text, &self.google_voice);
             if let Some(file) = audio_cache.get(&file_key) {
-                info!("Using cached value");
+                info!("Using cached value with key {}", file_key);
                 file
             } else {
-                info!("Writing new file");
+                info!("Writing new file with key {}", file_key);
                 let data = self
                     .google_speech_client
                     .synthesize(
@@ -182,6 +182,7 @@ impl SpeechService {
         voice: &azure_tts::VoiceSettings,
         style: AzureVoiceStyle,
     ) -> Result<()> {
+        info!("Using {:?} style", &style);
         let mut segments = vec![
             azure_tts::VoiceSegment::silence(
                 azure_tts::SilenceAttributeType::Sentenceboundary,
@@ -209,10 +210,10 @@ impl SpeechService {
         let sound: Box<dyn PlayAble> = if let Some(ref audio_cache) = self.audio_cache {
             let file_key = hash_azure_tts(text, voice, self.azure_audio_format, style);
             if let Some(file) = audio_cache.get(&file_key) {
-                info!("Using cached value");
+                info!("Using cached value with key {}", file_key);
                 file
             } else {
-                info!("Writing new file");
+                info!("Writing new file with key {}", file_key);
                 let data = self
                     .azure_speech_client
                     .synthesize_segments(segments, voice, self.azure_audio_format)
