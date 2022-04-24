@@ -34,12 +34,14 @@ fn hash_azure_tts(
     text: &str,
     voice: &azure_tts::VoiceSettings,
     format: azure_tts::AudioFormat,
+    style: AzureVoiceStyle,
 ) -> String {
     let mut hasher = Sha256::new();
     hasher.update(text);
     hasher.update(&voice.name);
     hasher.update(&voice.language);
     hasher.update(format.as_string());
+    hasher.update(&[style as u8]);
     hasher.update(AZURE_FORMAT_VERSION.to_be_bytes());
     // Turning it into json to hash is a hack.
     // TODO: hash the type not the json
@@ -205,7 +207,7 @@ impl SpeechService {
         segments.push(contents);
 
         let sound: Box<dyn PlayAble> = if let Some(ref audio_cache) = self.audio_cache {
-            let file_key = hash_azure_tts(text, voice, self.azure_audio_format);
+            let file_key = hash_azure_tts(text, voice, self.azure_audio_format, style);
             if let Some(file) = audio_cache.get(&file_key) {
                 info!("Using cached value");
                 file
