@@ -8,8 +8,6 @@ if (( "$EUID" == 0 )); then
 fi
 
 
-git pull
-
 cargo install --path .
 
 # This script is all kinds of yikes
