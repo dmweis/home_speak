@@ -28,7 +28,7 @@ fn hash_google_tts(text: &str, voice: &google_tts::VoiceProps) -> String {
 }
 
 // Used to invalidate old cache
-const AZURE_FORMAT_VERSION: u32 = 200;
+const AZURE_FORMAT_VERSION: u32 = 3;
 
 fn hash_azure_tts(
     text: &str,
