@@ -1,7 +1,7 @@
 use crate::error::{HomeSpeakError, Result};
+use crate::speech_service::PlayAble;
 use std::fs::{self, File};
 use std::io::prelude::*;
-use std::io::{Read, Seek};
 use std::path::Path;
 
 pub(crate) struct AudioCache {
@@ -18,7 +18,7 @@ impl AudioCache {
         Ok(AudioCache { cache_dir_path })
     }
 
-    pub(crate) fn get(&self, key: &str) -> Option<Box<impl Read + Seek>> {
+    pub(crate) fn get(&self, key: &str) -> Option<Box<dyn PlayAble>> {
         let path = Path::new(&self.cache_dir_path);
         let file_path = path.join(format!("{}.mp3", key));
         if let Ok(file) = File::open(file_path) {

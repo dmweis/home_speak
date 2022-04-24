@@ -4,6 +4,7 @@ use log::*;
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
+use std::fs::File;
 use std::io::Cursor;
 use std::io::{Read, Seek};
 use tokio::task;
@@ -57,6 +58,11 @@ pub struct SpeechService {
     azure_audio_format: azure_tts::AudioFormat,
 }
 
+pub trait PlayAble: std::io::Read + std::io::Seek + Send {}
+
+impl PlayAble for Cursor<Vec<u8>> {}
+impl PlayAble for File {}
+
 impl SpeechService {
     pub fn new(
         google_api_key: Secret<String>,
@@ -105,11 +111,11 @@ impl SpeechService {
     }
 
     async fn say_google(&self, text: &str) -> Result<()> {
-        if let Some(audio_cache) = &self.audio_cache {
+        let playable: Box<dyn PlayAble> = if let Some(audio_cache) = &self.audio_cache {
             let file_key = hash_google_tts(text, &self.google_voice);
             if let Some(file) = audio_cache.get(&file_key) {
                 info!("Using cached value");
-                self.play(file).await?;
+                file
             } else {
                 info!("Writing new file");
                 let data = self
@@ -128,13 +134,11 @@ impl SpeechService {
                     data.as_byte_stream()
                         .map_err(|_| HomeSpeakError::GoogleTtsError)?,
                 )?;
-                let buffer = Cursor::new(
+                Box::new(Cursor::new(
                     data.as_byte_stream()
                         .map_err(|_| HomeSpeakError::GoogleTtsError)?,
-                );
-                self.play(buffer).await?;
+                ))
             }
-            Ok(())
         } else {
             let data = self
                 .google_speech_client
@@ -146,21 +150,20 @@ impl SpeechService {
                 .await
                 .map_err(|_| HomeSpeakError::GoogleTtsError)?;
 
-            let buffer = Cursor::new(
+            Box::new(Cursor::new(
                 data.as_byte_stream()
                     .map_err(|_| HomeSpeakError::GoogleTtsError)?,
-            );
-            self.play(buffer).await?;
-            Ok(())
-        }
+            ))
+        };
+        self.play(playable).await?;
+        Ok(())
     }
 
     async fn say_azure(&mut self, text: &str) -> Result<()> {
-        if let Some(ref audio_cache) = self.audio_cache {
+        let sound: Box<dyn PlayAble> = if let Some(ref audio_cache) = self.audio_cache {
             let file_key = hash_azure_tts(text, &self.azure_voice, self.azure_audio_format);
             if let Some(file) = audio_cache.get(&file_key) {
-                info!("Using cached value");
-                self.play(file).await?;
+                file
             } else {
                 info!("Writing new file");
                 let data = self
@@ -168,15 +171,16 @@ impl SpeechService {
                     .synthesize(text, &self.azure_voice, self.azure_audio_format)
                     .await?;
                 audio_cache.set(&file_key, data.clone())?;
-                self.play(Cursor::new(data)).await?;
+                Box::new(Cursor::new(data))
             }
         } else {
             let data = self
                 .azure_speech_client
                 .synthesize(text, &self.azure_voice, self.azure_audio_format)
                 .await?;
-            self.play(Cursor::new(data)).await?;
-        }
+            Box::new(Cursor::new(data))
+        };
+        self.play(sound).await?;
         Ok(())
     }
 
