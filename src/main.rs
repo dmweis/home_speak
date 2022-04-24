@@ -3,11 +3,12 @@ mod error;
 mod speech_service;
 
 use bytes::Bytes;
-use crossbeam_channel::unbounded;
+use crossbeam_channel::{unbounded, Sender};
 use local_ip_address::list_afinet_netifas;
 use log::*;
 use serde::Deserialize;
 use simplelog::*;
+use speech_service::{SpeechService, TtsService};
 use std::{io::Read, path::PathBuf, str};
 use structopt::StructOpt;
 use warp::Filter;
@@ -55,38 +56,18 @@ struct Opts {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    if TermLogger::init(
-        LevelFilter::Info,
-        Config::default(),
-        TerminalMode::Mixed,
-        ColorChoice::Auto,
-    )
-    .is_err()
-    {
-        eprintln!("Failed to create term logger");
-        if SimpleLogger::init(LevelFilter::Info, Config::default()).is_err() {
-            eprintln!("Failed to create simple logger");
-        }
-    }
+    setup_logging();
     let opts = Opts::from_args();
 
     let app_config = get_settings(opts.config)?;
 
-    let (s, r) = unbounded::<String>();
-    let mut speech_service = speech_service::SpeechService::new(
+    let speech_service = speech_service::SpeechService::new(
         app_config.google_api_key,
         &app_config.azure_api_key,
         app_config.cache_dir_path,
     )?;
 
-    tokio::spawn(async move {
-        for msg in r {
-            speech_service
-                .say(&msg, app_config.tts_service)
-                .await
-                .unwrap();
-        }
-    });
+    let speech_service_handle = start_speech_service_worker(speech_service, app_config.tts_service);
 
     // TODO(David): Extract this
     // probably use some templateing engine too
@@ -99,35 +80,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         info!("local interfaces are: {:?}", interfaces);
-        s.send(format!(
+        speech_service_handle.say(&format!(
             "Joy has woken up. I am currently reachable on following addresses. {}. My hostname is {}",
             interfaces,
             hostname(),
-        ))
-        .unwrap();
+        ));
     } else {
         error!("Failed to query local network interfaces");
-        s.send("Failed to query local network interfaces".to_owned())
-            .unwrap();
+        speech_service_handle.say("Failed to query local network interfaces");
     }
 
     if let Some(phrases) = opts.phrases {
         let phrases = phrases.split(',');
         for phrase in phrases.into_iter().filter(|text| !text.is_empty()) {
-            s.send(phrase.to_owned()).unwrap();
+            speech_service_handle.say(phrase);
         }
 
         println!("Press Enter to exit...");
         let _ = std::io::stdin().read(&mut [0]).unwrap();
     } else {
         // use rest service if no phrases provided
-        let rest_sender = s.clone();
+        let rest_sender = speech_service_handle.clone();
         let route = warp::path("say")
             .and(warp::post())
             .and(warp::body::bytes())
             .map(move |payload: Bytes| {
                 if let Ok(text) = str::from_utf8(&payload) {
-                    rest_sender.send(text.to_owned()).unwrap();
+                    rest_sender.say(text);
                     "Ok\n"
                 } else {
                     error!("Failed processing rest request");
@@ -154,4 +133,50 @@ fn hostname() -> String {
 #[cfg(not(target_os = "linux"))]
 fn hostname() -> String {
     String::from("Unavailable on this platform")
+}
+
+#[derive(Debug, Clone)]
+struct SpeechServiceHandle {
+    sender: Sender<String>,
+}
+
+impl SpeechServiceHandle {
+    pub fn say(&self, phrase: &str) {
+        self.sender
+            .send(phrase.to_owned())
+            .expect("Speech service send failed");
+    }
+}
+
+fn start_speech_service_worker(
+    mut speech_service: SpeechService,
+    tts_service: TtsService,
+) -> SpeechServiceHandle {
+    let (sender, r) = unbounded::<String>();
+
+    tokio::spawn(async move {
+        for msg in r {
+            if let Err(e) = speech_service.say(&msg, tts_service).await {
+                error!("Speech service error {}", e);
+            }
+        }
+    });
+
+    SpeechServiceHandle { sender }
+}
+
+fn setup_logging() {
+    if TermLogger::init(
+        LevelFilter::Info,
+        Config::default(),
+        TerminalMode::Mixed,
+        ColorChoice::Auto,
+    )
+    .is_err()
+    {
+        eprintln!("Failed to create term logger");
+        if SimpleLogger::init(LevelFilter::Info, Config::default()).is_err() {
+            eprintln!("Failed to create simple logger");
+        }
+    }
 }
