@@ -3,7 +3,7 @@ use crossbeam_channel::{unbounded, Sender};
 use home_speak::{
     configuration::get_configuration,
     speech_service::{SpeechService, TtsService},
-    template_messages::generate_startup_message,
+    template_messages::{generate_startup_message, human_current_time},
 };
 use log::*;
 use simplelog::*;
@@ -31,6 +31,15 @@ async fn intro_handler(
 ) -> impl Responder {
     let startup_message = generate_startup_message(port.0);
     speech_service_handle.say(&startup_message);
+    HttpResponse::Ok().finish()
+}
+
+#[post("/current_time")]
+async fn current_time_handler(
+    speech_service_handle: web::Data<SpeechServiceHandle>,
+) -> impl Responder {
+    let current_time = human_current_time();
+    speech_service_handle.say(&format!("Current time is {}", current_time));
     HttpResponse::Ok().finish()
 }
 
@@ -64,9 +73,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let speech_service_handle =
         start_speech_service_worker(speech_service, app_config.tts_service_config.tts_service);
 
-    let startup_message = generate_startup_message(app_config.server_config.port);
-
-    speech_service_handle.say(&startup_message);
+    if !app_config.skip_intro {
+        let startup_message = generate_startup_message(app_config.server_config.port);
+        speech_service_handle.say(&startup_message);
+    }
 
     let speech_service_handle = web::Data::new(speech_service_handle);
 
@@ -81,6 +91,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         App::new()
             .service(intro_handler)
             .service(say_handler)
+            .service(current_time_handler)
             .app_data(speech_service_handle.clone())
             .app_data(port)
     })
