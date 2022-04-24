@@ -3,8 +3,9 @@ name = "home_speak"
 version = "0.1.0"
 authors = ["David Michael Weis <dweis7@gmail.com>"]
 edition = "2021"
+publish = false
+default-run = "home_speak_server"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 google_tts = { git = "https://github.com/dmweis/google_tts", branch = "main" }

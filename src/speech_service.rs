@@ -41,7 +41,7 @@ fn hash_azure_tts(
 }
 
 #[derive(Deserialize, Debug, Clone, Copy)]
-pub(crate) enum TtsService {
+pub enum TtsService {
     Azure,
     Google,
 }
@@ -167,7 +167,7 @@ impl SpeechService {
         Ok(())
     }
 
-    pub(crate) async fn say(&mut self, text: &str, service: TtsService) -> Result<()> {
+    pub async fn say(&mut self, text: &str, service: TtsService) -> Result<()> {
         match service {
             TtsService::Azure => self.say_azure(text).await?,
             TtsService::Google => self.say_google(text).await?,
@@ -176,7 +176,7 @@ impl SpeechService {
     }
 
     #[allow(dead_code)]
-    pub(crate) async fn sample_azure_languages(&mut self, text: &str) -> Result<()> {
+    pub async fn sample_azure_languages(&mut self, text: &str) -> Result<()> {
         let languages = self.azure_speech_client.list_voices().await?;
         for language in languages {
             if language.locale == "en-US" {

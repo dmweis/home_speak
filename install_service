@@ -8,7 +8,7 @@ if (( "$EUID" == 0 )); then
 fi
 
 
-cargo install --path .
+cargo install --path . --bin home_speak_server
 
 # This script is all kinds of yikes
 # Replace this default settings with something sensible
@@ -29,7 +29,7 @@ User=$(whoami)
 Type=simple
 Restart=on-failure
 RestartSec=5s
-ExecStart=/home/$(whoami)/.cargo/bin/home_speak --config /home/$(whoami)/.config/home_speak/settings
+ExecStart=/home/$(whoami)/.cargo/bin/home_speak_server --config /home/$(whoami)/.config/home_speak/settings
 
 [Install]
 WantedBy=default.target
