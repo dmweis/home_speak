@@ -24,6 +24,13 @@ async fn say_handler(
     }
 }
 
+#[post("/intro")]
+async fn intro_handler(speech_service_handle: web::Data<SpeechServiceHandle>) -> impl Responder {
+    let startup_message = generate_startup_message();
+    speech_service_handle.say(&startup_message);
+    HttpResponse::Ok().finish()
+}
+
 #[derive(Deserialize, Debug, Clone)]
 struct AppConfig {
     google_api_key: String,
@@ -86,6 +93,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     HttpServer::new(move || {
         App::new()
+            .service(intro_handler)
             .service(say_handler)
             .app_data(speech_service_handle.clone())
     })
