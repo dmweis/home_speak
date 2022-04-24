@@ -4,6 +4,7 @@ mod speech_service;
 
 use bytes::Bytes;
 use crossbeam_channel::unbounded;
+use local_ip_address::list_afinet_netifas;
 use log::*;
 use serde::Deserialize;
 use simplelog::*;
@@ -87,6 +88,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    // TODO(David): Extract this
+    // probably use some templateing engine too
+    if let Ok(network_interfaces) = list_afinet_netifas() {
+        let mut interfaces = String::new();
+        for (name, ip) in network_interfaces.iter() {
+            if ip.is_ipv4() && !ip.is_loopback() {
+                let interface = format!("{} at {:?}. ", name, ip);
+                interfaces.push_str(&interface);
+            }
+        }
+        info!("local interfaces are: {:?}", interfaces);
+        s.send(format!(
+            "Joy has woken up. I am currently reachable on following addresses. {}. My hostname is {}",
+            interfaces,
+            hostname(),
+        ))
+        .unwrap();
+    } else {
+        error!("Failed to query local network interfaces");
+        s.send("Failed to query local network interfaces".to_owned())
+            .unwrap();
+    }
+
     if let Some(phrases) = opts.phrases {
         let phrases = phrases.split(',');
         for phrase in phrases.into_iter().filter(|text| !text.is_empty()) {
@@ -113,4 +137,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         warp::serve(route).run(([0, 0, 0, 0], 3000)).await;
     }
     Ok(())
+}
+
+// TODO(David): I can do better than this
+
+#[cfg(target_os = "linux")]
+fn hostname() -> String {
+    use std::process::Command;
+
+    let output = Command::new("hostname")
+        .output()
+        .expect("failed to execute process");
+    str::from_utf8(&output.stdout).unwrap().to_owned()
+}
+
+#[cfg(not(target_os = "linux"))]
+fn hostname() -> String {
+    String::from("Unavailable")
 }
