@@ -1,8 +1,24 @@
 #!/usr/bin/env bash
 
+set -eo pipefail
+
+if (( "$EUID" == 0 )); then
+  echo "Please do not run as root"
+  exit
+fi
+
+
 git pull
 
 cargo install --path .
+
+# This script is all kinds of yikes
+# Replace this default settings with something sensible
+
+mkdir -p /home/$(whoami)/.config/home_speak
+touch /home/$(whoami)/.config/home_speak/settings.yaml
+cat "cache_dir_path: \"/home/$(whoami)/.cache/home_speak\"" >> /home/$(whoami)/.config/home_speak/settings.yaml
+
 
 cat <<EOT | sudo tee /etc/systemd/system/home_speak.service > /dev/null
 [Unit]
@@ -12,8 +28,7 @@ User=$(whoami)
 Type=simple
 Restart=on-failure
 RestartSec=5s
-Environment=GOOGLE_API_KEY=$(echo $GOOGLE_API_KEY)
-ExecStart=/home/$(whoami)/.cargo/bin/home_speak -c /home/$(whoami)/sounds
+ExecStart=/home/$(whoami)/.cargo/bin/home_speak --config /home/$(whoami)/.config/home_speak/settings
 [Install]
 WantedBy=default.target
 EOT
