@@ -16,6 +16,7 @@ pub fn generate_startup_message() -> String {
             error!("No NICs found");
             message_buffer.push_str("Huh. It looks like this device has no network interfaces? ")
         } else {
+            message_buffer.push_str("I am detecting the following network interfaces. ");
             let interface_message: String = network_interfaces
                 .iter()
                 .filter(|(_, ip)| ip.is_ipv4() && !ip.is_loopback())
