@@ -10,6 +10,10 @@ pub enum HomeSpeakError {
     CacheDirPathNotFound,
     #[error("failed to decode audio file")]
     FailedToDecodeAudioFile,
+    #[error("failed to create an audio sink")]
+    FailedToCreateASink,
+    #[error("failed to create an output stream")]
+    FailedToCreateAnOutputStream,
     // TODO: Propagate errors from google_tts
     #[error("google tts failed to synthesize")]
     GoogleTtsError,

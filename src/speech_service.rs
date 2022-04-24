@@ -6,6 +6,7 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::io::Cursor;
 use std::io::{Read, Seek};
+use tokio::task;
 
 fn hash_google_tts(text: &str, voice: &google_tts::VoiceProps) -> String {
     let mut hasher = Sha256::new();
@@ -84,14 +85,22 @@ impl SpeechService {
         })
     }
 
-    fn play<R: Read + Seek + Send + 'static>(&self, data: R) -> Result<()> {
-        // Simple way to spawn a new sink for every new sample
-        let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
-        let sink = rodio::Sink::try_new(&stream_handle).unwrap();
-        sink.append(
-            rodio::Decoder::new(data).map_err(|_| HomeSpeakError::FailedToDecodeAudioFile)?,
-        );
-        sink.sleep_until_end();
+    async fn play<R: Read + Seek + Send + 'static>(&self, data: R) -> Result<()> {
+        task::spawn_blocking(move || -> Result<()> {
+            // Simple way to spawn a new sink for every new sample
+            let (_stream, stream_handle) = rodio::OutputStream::try_default()
+                .map_err(|_| HomeSpeakError::FailedToCreateAnOutputStream)?;
+            let sink = rodio::Sink::try_new(&stream_handle)
+                .map_err(|_| HomeSpeakError::FailedToCreateASink)?;
+            sink.append(
+                rodio::Decoder::new(data).map_err(|_| HomeSpeakError::FailedToDecodeAudioFile)?,
+            );
+            // TODO(David): Here we could pause/resume playing audio
+            sink.sleep_until_end();
+            Ok(())
+        })
+        .await
+        .expect("Tokio blocking task for rodio failed")?;
         Ok(())
     }
 
@@ -100,7 +109,7 @@ impl SpeechService {
             let file_key = hash_google_tts(text, &self.google_voice);
             if let Some(file) = audio_cache.get(&file_key) {
                 info!("Using cached value");
-                self.play(file)?;
+                self.play(file).await?;
             } else {
                 info!("Writing new file");
                 let data = self
@@ -123,7 +132,7 @@ impl SpeechService {
                     data.as_byte_stream()
                         .map_err(|_| HomeSpeakError::GoogleTtsError)?,
                 );
-                self.play(buffer)?;
+                self.play(buffer).await?;
             }
             Ok(())
         } else {
@@ -141,7 +150,7 @@ impl SpeechService {
                 data.as_byte_stream()
                     .map_err(|_| HomeSpeakError::GoogleTtsError)?,
             );
-            self.play(buffer)?;
+            self.play(buffer).await?;
             Ok(())
         }
     }
@@ -151,7 +160,7 @@ impl SpeechService {
             let file_key = hash_azure_tts(text, &self.azure_voice, self.azure_audio_format);
             if let Some(file) = audio_cache.get(&file_key) {
                 info!("Using cached value");
-                self.play(file)?;
+                self.play(file).await?;
             } else {
                 info!("Writing new file");
                 let data = self
@@ -159,14 +168,14 @@ impl SpeechService {
                     .synthesize(text, &self.azure_voice, self.azure_audio_format)
                     .await?;
                 audio_cache.set(&file_key, data.clone())?;
-                self.play(Cursor::new(data))?;
+                self.play(Cursor::new(data)).await?;
             }
         } else {
             let data = self
                 .azure_speech_client
                 .synthesize(text, &self.azure_voice, self.azure_audio_format)
                 .await?;
-            self.play(Cursor::new(data))?;
+            self.play(Cursor::new(data)).await?;
         }
         Ok(())
     }
@@ -179,20 +188,20 @@ impl SpeechService {
         Ok(())
     }
 
-    #[allow(dead_code)]
     pub async fn sample_azure_languages(&mut self, text: &str) -> Result<()> {
         let languages = self.azure_speech_client.list_voices().await?;
         for language in languages {
             if language.locale == "en-US" {
-                println!(
+                info!(
                     "Lang name {} locale {}",
                     language.short_name, language.locale
                 );
+                let message = format!("Voice name is {}. {}", language.display_name, text);
                 let voice_settings = language.to_voice_settings();
                 let data = self
                     .azure_speech_client
                     .synthesize(
-                        text,
+                        &message,
                         &voice_settings,
                         azure_tts::AudioFormat::Audio48khz192kbitrateMonoMp3,
                     )
@@ -201,7 +210,7 @@ impl SpeechService {
                 if let Some(audio_cache) = &self.audio_cache {
                     audio_cache.set(&file_key, data.clone())?;
                 }
-                self.play(Cursor::new(data))?;
+                self.play(Cursor::new(data)).await?;
             }
         }
         Ok(())
