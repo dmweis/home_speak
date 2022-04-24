@@ -29,6 +29,7 @@ pub fn get_configuration(config: Option<PathBuf>) -> Result<AppConfig, Box<dyn s
 pub struct AppConfig {
     pub tts_service_config: TtsServiceConfig,
     pub server_config: ServerConfig,
+    #[serde(default)]
     pub skip_intro: bool,
 }
 
