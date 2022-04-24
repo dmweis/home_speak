@@ -1,7 +1,9 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
 use crossbeam_channel::{unbounded, Sender};
-use home_speak::speech_service::{SpeechService, TtsService};
-use local_ip_address::list_afinet_netifas;
+use home_speak::{
+    speech_service::{SpeechService, TtsService},
+    template_messages::generate_startup_message,
+};
 use log::*;
 use serde::Deserialize;
 use simplelog::*;
@@ -76,26 +78,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let speech_service_handle = start_speech_service_worker(speech_service, app_config.tts_service);
 
-    // TODO(David): Extract this
-    // probably use some templateing engine too
-    if let Ok(network_interfaces) = list_afinet_netifas() {
-        let mut interfaces = String::new();
-        for (name, ip) in network_interfaces.iter() {
-            if ip.is_ipv4() && !ip.is_loopback() {
-                let interface = format!("{} at {:?}. ", name, ip);
-                interfaces.push_str(&interface);
-            }
-        }
-        info!("local interfaces are: {:?}", interfaces);
-        speech_service_handle.say(&format!(
-            "Joy has woken up. I am currently reachable on following addresses. {}. My hostname is {}",
-            interfaces,
-            hostname(),
-        ));
-    } else {
-        error!("Failed to query local network interfaces");
-        speech_service_handle.say("Failed to query local network interfaces");
-    }
+    let startup_message = generate_startup_message();
+
+    speech_service_handle.say(&startup_message);
 
     let speech_service_handle = web::Data::new(speech_service_handle);
 
@@ -108,23 +93,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .run()
     .await?;
     Ok(())
-}
-
-// TODO(David): I can do better than this
-
-#[cfg(target_os = "linux")]
-fn hostname() -> String {
-    use std::process::Command;
-
-    let output = Command::new("hostname")
-        .output()
-        .expect("failed to execute process");
-    str::from_utf8(&output.stdout).unwrap().to_owned()
-}
-
-#[cfg(not(target_os = "linux"))]
-fn hostname() -> String {
-    String::from("Unavailable on this platform")
 }
 
 #[derive(Debug, Clone)]
