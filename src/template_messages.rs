@@ -2,6 +2,7 @@ use chrono::prelude::*;
 use local_ip_address::list_afinet_netifas;
 use log::*;
 use num_traits::FromPrimitive;
+use ordinal::Ordinal;
 use std::process::Command;
 use std::str;
 
@@ -10,7 +11,7 @@ pub fn generate_startup_message() -> String {
     message_buffer.push_str("Good morning! My name is Joy! ");
     message_buffer.push_str(&human_current_time());
     // TODO(David): Extract this
-    // probably use some templateing engine too
+    // probably use some templating engine too
     if let Ok(network_interfaces) = list_afinet_netifas() {
         if network_interfaces.is_empty() {
             error!("No NICs found");
@@ -68,7 +69,7 @@ fn human_current_time() -> String {
 
     format!(
         "Currently it is {} of {:?}, {} at {}:{}. ",
-        local.day(),
+        Ordinal(local.day()),
         Month::from_u32(local.month()).unwrap(),
         local.year(),
         local.hour(),

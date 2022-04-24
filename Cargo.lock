@@ -870,6 +870,7 @@ dependencies = [
  "local-ip-address",
  "log",
  "num-traits 0.2.14",
+ "ordinal",
  "rodio",
  "serde 1.0.132",
  "serde_json",
@@ -1551,6 +1552,15 @@ dependencies = [
  "libc",
  "pkg-config",
  "vcpkg",
+]
+
+[[package]]
+name = "ordinal"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c80c1530f46e9d8985706d7deb80b83172b250538902f607dea6cd6028851083"
+dependencies = [
+ "num-integer",
 ]
 
 [[package]]
