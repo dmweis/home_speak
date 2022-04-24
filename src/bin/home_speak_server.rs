@@ -1,4 +1,4 @@
-use bytes::Bytes;
+use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
 use crossbeam_channel::{unbounded, Sender};
 use home_speak::speech_service::{SpeechService, TtsService};
 use local_ip_address::list_afinet_netifas;
@@ -7,7 +7,20 @@ use serde::Deserialize;
 use simplelog::*;
 use std::{path::PathBuf, str};
 use structopt::StructOpt;
-use warp::Filter;
+
+#[post("/say")]
+async fn say_handler(
+    body: web::Bytes,
+    speech_service_handle: web::Data<SpeechServiceHandle>,
+) -> impl Responder {
+    if let Ok(text) = str::from_utf8(&body) {
+        speech_service_handle.say(text);
+        HttpResponse::Ok().finish()
+    } else {
+        error!("Failed processing rest request");
+        HttpResponse::BadRequest().finish()
+    }
+}
 
 #[derive(Deserialize, Debug, Clone)]
 struct AppConfig {
@@ -84,20 +97,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         speech_service_handle.say("Failed to query local network interfaces");
     }
 
-    let rest_sender = speech_service_handle.clone();
-    let route = warp::path("say")
-        .and(warp::post())
-        .and(warp::body::bytes())
-        .map(move |payload: Bytes| {
-            if let Ok(text) = str::from_utf8(&payload) {
-                rest_sender.say(text);
-                "Ok\n"
-            } else {
-                error!("Failed processing rest request");
-                "Error"
-            }
-        });
-    warp::serve(route).run(([0, 0, 0, 0], 3000)).await;
+    let speech_service_handle = web::Data::new(speech_service_handle);
+
+    HttpServer::new(move || {
+        App::new()
+            .service(say_handler)
+            .app_data(speech_service_handle.clone())
+    })
+    .bind(("0.0.0.0", 3000))?
+    .run()
+    .await?;
     Ok(())
 }
 
