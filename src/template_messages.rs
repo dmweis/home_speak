@@ -7,7 +7,7 @@ use std::str;
 
 pub fn generate_startup_message() -> String {
     let mut message_buffer = String::new();
-    message_buffer.push_str("Good morning! I have just woken up. ");
+    message_buffer.push_str("Good morning! My name is Joy! ");
     message_buffer.push_str(&human_current_time());
     // TODO(David): Extract this
     // probably use some templateing engine too
