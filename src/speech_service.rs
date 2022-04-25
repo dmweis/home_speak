@@ -75,7 +75,7 @@ pub struct SpeechService {
     azure_audio_format: azure_tts::AudioFormat,
 }
 
-pub trait PlayAble: std::io::Read + std::io::Seek + Send {}
+pub trait PlayAble: std::io::Read + std::io::Seek + Send + Sync {}
 
 impl PlayAble for Cursor<Vec<u8>> {}
 impl PlayAble for File {}
@@ -108,9 +108,9 @@ impl SpeechService {
         })
     }
 
-    async fn play<R: Read + Seek + Send + 'static>(&self, data: R) -> Result<()> {
+    async fn play<R: Read + Seek + Send + Sync + 'static>(&self, data: R) -> Result<()> {
+        // Simple way to spawn a new sink for every new sample
         task::spawn_blocking(move || -> Result<()> {
-            // Simple way to spawn a new sink for every new sample
             let (_stream, stream_handle) = rodio::OutputStream::try_default()
                 .map_err(|_| HomeSpeakError::FailedToCreateAnOutputStream)?;
             let sink = rodio::Sink::try_new(&stream_handle)
