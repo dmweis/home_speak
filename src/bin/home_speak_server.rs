@@ -1,4 +1,5 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
+use clokwerk::{Job, TimeUnits};
 use home_speak::{
     configuration::get_configuration,
     speech_service::{AzureVoiceStyle, SpeechService, TtsService},
@@ -227,7 +228,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             speech_service.say(&message_part, TtsService::Azure).await?;
         }
     }
+
     let speech_service = web::Data::new(tokio::sync::Mutex::new(speech_service));
+
+    // Test alarms
+    let mut scheduler = clokwerk::AsyncScheduler::new();
+    let speech_service_clone = speech_service.clone();
+    scheduler
+        .every(1.day())
+        .at("07:30")
+        .repeating_every(5.minutes())
+        .times(10)
+        .run(move || {
+            let speech_service_clone = speech_service_clone.clone();
+            async move {
+                let current_time = human_current_time();
+                info!("Triggering alarm at {}", &current_time);
+                let message = format!("Good morning sunshine! It's currently {} and it's time to get up and be useful. It's your on call.", current_time);
+                speech_service_clone
+                    .lock()
+                    .await
+                    .say_azure_with_feelings(&message, AzureVoiceStyle::Cheerful)
+                    .await
+                    .unwrap();
+            }
+        });
+
+    tokio::spawn(async move {
+        loop {
+            scheduler.run_pending().await;
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        }
+    });
 
     let address = format!(
         "{}:{}",
