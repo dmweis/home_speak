@@ -4,6 +4,7 @@ use log::*;
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
+use std::sync::mpsc::Receiver;
 use std::{
     fs::File,
     io::Cursor,
@@ -75,42 +76,49 @@ enum AudioPlayerCommand {
     Volume(f32),
 }
 
+fn audio_player_loop(
+    receiver: &Receiver<AudioPlayerCommand>,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    let (_output_stream, output_stream_handle) = rodio::OutputStream::try_default()
+        .map_err(|_| HomeSpeakError::FailedToCreateAnOutputStream)?;
+    let sink = rodio::Sink::try_new(&output_stream_handle)
+        .map_err(|_| HomeSpeakError::FailedToCreateASink)?;
+    loop {
+        let command = receiver.recv()?;
+        match command {
+            AudioPlayerCommand::Play(sound) => {
+                sink.append(
+                    rodio::Decoder::new(sound)
+                        .map_err(|_| HomeSpeakError::FailedToDecodeAudioFile)?,
+                );
+            }
+            AudioPlayerCommand::Pause => {
+                info!("Pausing audio");
+                sink.pause()
+            }
+            AudioPlayerCommand::Resume => {
+                info!("Resuming audio");
+                sink.play()
+            }
+            AudioPlayerCommand::Stop => {
+                info!("Stopping audio");
+                warn!("Ignoring stop because it destroys the sink");
+                // sink.stop()
+            }
+            AudioPlayerCommand::Volume(volume) => {
+                info!("Settings volume to {}", volume);
+                sink.set_volume(volume)
+            }
+        }
+    }
+}
+
 fn create_player() -> Sender<AudioPlayerCommand> {
     let (sender, receiver) = channel();
-    thread::spawn(move || {
-        let (_output_stream, output_stream_handle) = rodio::OutputStream::try_default()
-            .map_err(|_| HomeSpeakError::FailedToCreateAnOutputStream)
-            .unwrap();
-        let sink = rodio::Sink::try_new(&output_stream_handle)
-            .map_err(|_| HomeSpeakError::FailedToCreateASink)
-            .unwrap();
-        for playable in receiver {
-            match playable {
-                AudioPlayerCommand::Play(sound) => {
-                    sink.append(
-                        rodio::Decoder::new(sound)
-                            .map_err(|_| HomeSpeakError::FailedToDecodeAudioFile)
-                            .unwrap(),
-                    );
-                }
-                AudioPlayerCommand::Pause => {
-                    info!("Pausing audio");
-                    sink.pause()
-                }
-                AudioPlayerCommand::Resume => {
-                    info!("Resuming audio");
-                    sink.play()
-                }
-                AudioPlayerCommand::Stop => {
-                    info!("Stopping audio");
-                    warn!("Ignoring stop because it destroys the sink");
-                    // sink.stop()
-                }
-                AudioPlayerCommand::Volume(volume) => {
-                    info!("Settings volume to {}", volume);
-                    sink.set_volume(volume)
-                }
-            }
+    thread::spawn(move || loop {
+        // This may miss on sender being dead. But if sender is dead we have bigger issues
+        if let Err(e) = audio_player_loop(&receiver) {
+            error!("Audio player loop failed with {}", e);
         }
     });
     sender
