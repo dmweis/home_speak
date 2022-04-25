@@ -232,23 +232,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let speech_service = web::Data::new(tokio::sync::Mutex::new(speech_service));
 
     // Test alarms
+    // This sounds way to positive. I need it to say something long and annoying
     let mut scheduler = clokwerk::AsyncScheduler::new();
     let speech_service_clone = speech_service.clone();
     scheduler
         .every(1.day())
         .at("07:30")
-        .repeating_every(5.minutes())
+        .repeating_every(3.minutes())
         .times(10)
         .run(move || {
             let speech_service_clone = speech_service_clone.clone();
             async move {
                 let current_time = human_current_time();
                 info!("Triggering alarm at {}", &current_time);
-                let message = format!("Good morning sunshine! It's currently {} and it's time to get up and be useful. It's your on call.", current_time);
+                let message = format!("Good morning! It's currently {} and it's time to get up and actually do something 
+useful for once. Today is your on-call.", current_time);
                 speech_service_clone
                     .lock()
                     .await
                     .say_azure_with_feelings(&message, AzureVoiceStyle::Cheerful)
+                    .await
+                    .unwrap();
+                let bee_movie = "According to all known laws of aviation, there is no way a bee should 
+be able to fly. It's wings are too small to get its fat little body off the ground. The bee, of course, flies 
+anyway, because bees don't care what humans think is impossible.";
+                speech_service_clone
+                    .lock()
+                    .await
+                    .say_azure_with_feelings(bee_movie, AzureVoiceStyle::Angry)
                     .await
                     .unwrap();
             }
