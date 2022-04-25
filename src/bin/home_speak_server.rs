@@ -1,5 +1,4 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
-use crossbeam_channel::{unbounded, Sender};
 use home_speak::{
     configuration::get_configuration,
     speech_service::{AzureVoiceStyle, SpeechService, TtsService},
@@ -9,15 +8,26 @@ use log::*;
 use simplelog::*;
 use std::{path::PathBuf, str};
 use structopt::StructOpt;
+use tokio::sync::Mutex;
 
 #[post("/say")]
 async fn say_handler(
     body: web::Bytes,
-    speech_service_handle: web::Data<SpeechServiceHandle>,
+    speech_service: web::Data<Mutex<SpeechService>>,
 ) -> impl Responder {
     if let Ok(text) = str::from_utf8(&body) {
-        speech_service_handle.say(text);
-        HttpResponse::Ok().finish()
+        match speech_service
+            .lock()
+            .await
+            .say(text, TtsService::Azure)
+            .await
+        {
+            Ok(_) => HttpResponse::Ok().finish(),
+            Err(e) => {
+                error!("Failed to call speech service {}", e);
+                HttpResponse::InternalServerError().finish()
+            }
+        }
     } else {
         error!("Failed processing rest request");
         HttpResponse::BadRequest().finish()
@@ -28,13 +38,22 @@ async fn say_handler(
 #[post("/say_angry")]
 async fn say_angry_handler(
     body: web::Bytes,
-    speech_service_handle: web::Data<SpeechServiceHandle>,
+    speech_service: web::Data<Mutex<SpeechService>>,
 ) -> impl Responder {
     if let Ok(text) = str::from_utf8(&body) {
-        speech_service_handle.say_with_style(text, AzureVoiceStyle::Angry);
-        HttpResponse::Ok().finish()
+        if let Err(e) = speech_service
+            .lock()
+            .await
+            .say_azure_with_feelings(text, AzureVoiceStyle::Angry)
+            .await
+        {
+            error!("Failed to call speech service {}", e);
+            HttpResponse::InternalServerError().finish()
+        } else {
+            HttpResponse::Ok().finish()
+        }
     } else {
-        error!("Failed processing rest request");
+        error!("Failed processing request");
         HttpResponse::BadRequest().finish()
     }
 }
@@ -42,13 +61,22 @@ async fn say_angry_handler(
 #[post("/say_sad")]
 async fn say_sad_handler(
     body: web::Bytes,
-    speech_service_handle: web::Data<SpeechServiceHandle>,
+    speech_service: web::Data<Mutex<SpeechService>>,
 ) -> impl Responder {
     if let Ok(text) = str::from_utf8(&body) {
-        speech_service_handle.say_with_style(text, AzureVoiceStyle::Sad);
-        HttpResponse::Ok().finish()
+        if let Err(e) = speech_service
+            .lock()
+            .await
+            .say_azure_with_feelings(text, AzureVoiceStyle::Sad)
+            .await
+        {
+            error!("Failed to call speech service {}", e);
+            HttpResponse::InternalServerError().finish()
+        } else {
+            HttpResponse::Ok().finish()
+        }
     } else {
-        error!("Failed processing rest request");
+        error!("Failed processing request");
         HttpResponse::BadRequest().finish()
     }
 }
@@ -56,13 +84,22 @@ async fn say_sad_handler(
 #[post("/say_cheerful")]
 async fn say_cheerful_handler(
     body: web::Bytes,
-    speech_service_handle: web::Data<SpeechServiceHandle>,
+    speech_service: web::Data<Mutex<SpeechService>>,
 ) -> impl Responder {
     if let Ok(text) = str::from_utf8(&body) {
-        speech_service_handle.say_with_style(text, AzureVoiceStyle::Cheerful);
-        HttpResponse::Ok().finish()
+        if let Err(e) = speech_service
+            .lock()
+            .await
+            .say_azure_with_feelings(text, AzureVoiceStyle::Cheerful)
+            .await
+        {
+            error!("Failed to call speech service {}", e);
+            HttpResponse::InternalServerError().finish()
+        } else {
+            HttpResponse::Ok().finish()
+        }
     } else {
-        error!("Failed processing rest request");
+        error!("Failed processing request");
         HttpResponse::BadRequest().finish()
     }
 }
@@ -70,11 +107,20 @@ async fn say_cheerful_handler(
 #[post("/sample_azure_languages")]
 async fn sample_azure_languages_handler(
     body: web::Bytes,
-    speech_service_handle: web::Data<SpeechServiceHandle>,
+    speech_service: web::Data<Mutex<SpeechService>>,
 ) -> impl Responder {
     if let Ok(text) = str::from_utf8(&body) {
-        speech_service_handle.sample_azure_languages(text);
-        HttpResponse::Ok().finish()
+        if let Err(e) = speech_service
+            .lock()
+            .await
+            .sample_azure_languages(text)
+            .await
+        {
+            error!("Failed to call speech service {}", e);
+            HttpResponse::InternalServerError().finish()
+        } else {
+            HttpResponse::Ok().finish()
+        }
     } else {
         error!("Failed processing rest request");
         HttpResponse::BadRequest().finish()
@@ -83,22 +129,68 @@ async fn sample_azure_languages_handler(
 
 #[post("/intro")]
 async fn intro_handler(
-    speech_service_handle: web::Data<SpeechServiceHandle>,
+    speech_service: web::Data<Mutex<SpeechService>>,
     port: web::Data<BoundPort>,
 ) -> impl Responder {
     let startup_message = generate_startup_message(port.0);
-    for message_part in startup_message {
-        speech_service_handle.say(&message_part);
+    let mut speech_service = speech_service.lock().await;
+    for message_portion in startup_message {
+        if let Err(e) = speech_service
+            .say(&message_portion, TtsService::Azure)
+            .await
+        {
+            error!("Failed to call speech service {}", e);
+            return HttpResponse::InternalServerError().finish();
+        }
     }
     HttpResponse::Ok().finish()
 }
 
 #[post("/current_time")]
-async fn current_time_handler(
-    speech_service_handle: web::Data<SpeechServiceHandle>,
-) -> impl Responder {
+async fn current_time_handler(speech_service: web::Data<Mutex<SpeechService>>) -> impl Responder {
     let current_time = human_current_time();
-    speech_service_handle.say(&format!("Current time is {}", current_time));
+    match speech_service
+        .lock()
+        .await
+        .say(
+            &format!("Current time is {}", current_time),
+            TtsService::Azure,
+        )
+        .await
+    {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(e) => {
+            error!("Failed to call speech service {}", e);
+
+            HttpResponse::Ok().finish()
+        }
+    }
+}
+
+#[post("/pause")]
+async fn pause(speech_service: web::Data<Mutex<SpeechService>>) -> impl Responder {
+    speech_service.lock().await.pause();
+    HttpResponse::Ok().finish()
+}
+
+#[post("/resume")]
+async fn resume(speech_service: web::Data<Mutex<SpeechService>>) -> impl Responder {
+    speech_service.lock().await.resume();
+    HttpResponse::Ok().finish()
+}
+
+#[post("/stop")]
+async fn stop(speech_service: web::Data<Mutex<SpeechService>>) -> impl Responder {
+    speech_service.lock().await.stop();
+    HttpResponse::Ok().finish()
+}
+
+#[post("/set_volume/{volume}")]
+async fn set_volume(
+    speech_service: web::Data<Mutex<SpeechService>>,
+    volume: web::Path<f32>,
+) -> impl Responder {
+    speech_service.lock().await.volume(volume.into_inner());
     HttpResponse::Ok().finish()
 }
 
@@ -123,23 +215,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app_config = get_configuration(opts.config)?;
 
-    let speech_service = SpeechService::new(
+    let mut speech_service = SpeechService::new(
         app_config.tts_service_config.google_api_key,
         app_config.tts_service_config.azure_api_key,
         app_config.tts_service_config.cache_dir_path,
     )?;
 
-    let speech_service_handle =
-        start_speech_service_worker(speech_service, app_config.tts_service_config.tts_service);
-
     if !app_config.skip_intro {
         let startup_message = generate_startup_message(app_config.server_config.port);
         for message_part in startup_message {
-            speech_service_handle.say(&message_part);
+            speech_service.say(&message_part, TtsService::Azure).await?;
         }
     }
-
-    let speech_service_handle = web::Data::new(speech_service_handle);
+    let speech_service = web::Data::new(tokio::sync::Mutex::new(speech_service));
 
     let address = format!(
         "{}:{}",
@@ -157,81 +245,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .service(say_angry_handler)
             .service(say_cheerful_handler)
             .service(say_sad_handler)
-            .app_data(speech_service_handle.clone())
+            .service(pause)
+            .service(resume)
+            .service(stop)
+            .service(set_volume)
+            .app_data(speech_service.clone())
             .app_data(port)
     })
     .bind(address)?
     .run()
     .await?;
     Ok(())
-}
-
-#[derive(Debug, Clone)]
-struct SpeechServiceHandle {
-    sender: Sender<SpeechServiceMessage>,
-}
-
-enum SpeechServiceMessage {
-    Simple(String),
-    WithStyle(String, AzureVoiceStyle),
-    AzureVoiceSampling(String),
-}
-
-impl SpeechServiceHandle {
-    pub fn say(&self, phrase: &str) {
-        self.sender
-            .send(SpeechServiceMessage::Simple(phrase.to_owned()))
-            .expect("Speech service send failed");
-    }
-
-    pub fn say_with_style(&self, phrase: &str, style: AzureVoiceStyle) {
-        self.sender
-            .send(SpeechServiceMessage::WithStyle(phrase.to_owned(), style))
-            .expect("Speech service send failed");
-    }
-
-    pub fn sample_azure_languages(&self, phrase: &str) {
-        self.sender
-            .send(SpeechServiceMessage::AzureVoiceSampling(phrase.to_owned()))
-            .expect("Speech service send failed");
-    }
-}
-
-fn start_speech_service_worker(
-    mut speech_service: SpeechService,
-    tts_service: TtsService,
-) -> SpeechServiceHandle {
-    let (sender, r) = unbounded::<SpeechServiceMessage>();
-
-    tokio::spawn(async move {
-        for msg in r {
-            // speech is actually partially blocking
-            // thought it doesn't have to be. It's just because of how we handle
-            // waiting until a sample is done playing
-            match msg {
-                SpeechServiceMessage::Simple(message) => {
-                    if let Err(e) = speech_service.say(&message, tts_service).await {
-                        error!("Speech service error {}", e);
-                    }
-                }
-                SpeechServiceMessage::WithStyle(message, style) => {
-                    if let Err(e) = speech_service
-                        .say_azure_with_feelings(&message, style)
-                        .await
-                    {
-                        error!("Speech service error {}", e);
-                    }
-                }
-                SpeechServiceMessage::AzureVoiceSampling(message) => {
-                    if let Err(e) = speech_service.sample_azure_languages(&message).await {
-                        error!("Speech service error {}", e);
-                    }
-                }
-            }
-        }
-    });
-
-    SpeechServiceHandle { sender }
 }
 
 fn setup_logging() {

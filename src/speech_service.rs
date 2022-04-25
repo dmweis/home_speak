@@ -1,14 +1,15 @@
 use crate::audio_cache::AudioCache;
 use crate::error::{HomeSpeakError, Result};
-use azure_tts::VoiceSegment;
 use log::*;
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
-use std::fs::File;
-use std::io::Cursor;
-use std::io::{Read, Seek};
-use tokio::task;
+use std::{
+    fs::File,
+    io::Cursor,
+    sync::mpsc::{channel, Sender},
+    thread,
+};
 
 fn hash_google_tts(text: &str, voice: &google_tts::VoiceProps) -> String {
     let mut hasher = Sha256::new();
@@ -66,6 +67,55 @@ pub enum AzureVoiceStyle {
     Sad,
 }
 
+enum AudioPlayerCommand {
+    Play(Box<dyn PlayAble>),
+    Pause,
+    Resume,
+    Stop,
+    Volume(f32),
+}
+
+fn create_player() -> Sender<AudioPlayerCommand> {
+    let (sender, receiver) = channel();
+    thread::spawn(move || {
+        let (_output_stream, output_stream_handle) = rodio::OutputStream::try_default()
+            .map_err(|_| HomeSpeakError::FailedToCreateAnOutputStream)
+            .unwrap();
+        let sink = rodio::Sink::try_new(&output_stream_handle)
+            .map_err(|_| HomeSpeakError::FailedToCreateASink)
+            .unwrap();
+        for playable in receiver {
+            match playable {
+                AudioPlayerCommand::Play(sound) => {
+                    sink.append(
+                        rodio::Decoder::new(sound)
+                            .map_err(|_| HomeSpeakError::FailedToDecodeAudioFile)
+                            .unwrap(),
+                    );
+                }
+                AudioPlayerCommand::Pause => {
+                    info!("Pausing audio");
+                    sink.pause()
+                }
+                AudioPlayerCommand::Resume => {
+                    info!("Resuming audio");
+                    sink.play()
+                }
+                AudioPlayerCommand::Stop => {
+                    info!("Stopping audio");
+                    warn!("Ignoring stop because it destroys the sink");
+                    // sink.stop()
+                }
+                AudioPlayerCommand::Volume(volume) => {
+                    info!("Settings volume to {}", volume);
+                    sink.set_volume(volume)
+                }
+            }
+        }
+    });
+    sender
+}
+
 pub struct SpeechService {
     google_speech_client: google_tts::GoogleTtsClient,
     azure_speech_client: azure_tts::VoiceService,
@@ -73,6 +123,7 @@ pub struct SpeechService {
     google_voice: google_tts::VoiceProps,
     azure_voice: azure_tts::VoiceSettings,
     azure_audio_format: azure_tts::AudioFormat,
+    audio_sender: Sender<AudioPlayerCommand>,
 }
 
 pub trait PlayAble: std::io::Read + std::io::Seek + Send + Sync {}
@@ -98,6 +149,8 @@ impl SpeechService {
             None => None,
         };
 
+        let audio_sender = create_player();
+
         Ok(SpeechService {
             google_speech_client,
             azure_speech_client,
@@ -105,29 +158,18 @@ impl SpeechService {
             google_voice: google_tts::VoiceProps::default_english_female_wavenet(),
             azure_voice: azure_tts::EnUsVoices::SaraNeural.to_voice_settings(),
             azure_audio_format: azure_tts::AudioFormat::Audio48khz192kbitrateMonoMp3,
+            audio_sender,
         })
     }
 
-    async fn play<R: Read + Seek + Send + Sync + 'static>(&self, data: R) -> Result<()> {
-        // Simple way to spawn a new sink for every new sample
-        task::spawn_blocking(move || -> Result<()> {
-            let (_stream, stream_handle) = rodio::OutputStream::try_default()
-                .map_err(|_| HomeSpeakError::FailedToCreateAnOutputStream)?;
-            let sink = rodio::Sink::try_new(&stream_handle)
-                .map_err(|_| HomeSpeakError::FailedToCreateASink)?;
-            sink.append(
-                rodio::Decoder::new(data).map_err(|_| HomeSpeakError::FailedToDecodeAudioFile)?,
-            );
-            // TODO(David): Here we could pause/resume playing audio
-            sink.sleep_until_end();
-            Ok(())
-        })
-        .await
-        .expect("Tokio blocking task for rodio failed")?;
+    async fn play(&mut self, data: Box<dyn PlayAble>) -> Result<()> {
+        self.audio_sender
+            .send(AudioPlayerCommand::Play(data))
+            .unwrap();
         Ok(())
     }
 
-    async fn say_google(&self, text: &str) -> Result<()> {
+    async fn say_google(&mut self, text: &str) -> Result<()> {
         let playable: Box<dyn PlayAble> = if let Some(audio_cache) = &self.audio_cache {
             let file_key = hash_google_tts(text, &self.google_voice);
             if let Some(file) = audio_cache.get(&file_key) {
@@ -198,11 +240,15 @@ impl SpeechService {
             ),
         ];
         let contents = match style {
-            AzureVoiceStyle::Plain => VoiceSegment::plain(text),
-            AzureVoiceStyle::Angry => VoiceSegment::with_expression(text, azure_tts::Style::Angry),
-            AzureVoiceStyle::Sad => VoiceSegment::with_expression(text, azure_tts::Style::Sad),
+            AzureVoiceStyle::Plain => azure_tts::VoiceSegment::plain(text),
+            AzureVoiceStyle::Angry => {
+                azure_tts::VoiceSegment::with_expression(text, azure_tts::Style::Angry)
+            }
+            AzureVoiceStyle::Sad => {
+                azure_tts::VoiceSegment::with_expression(text, azure_tts::Style::Sad)
+            }
             AzureVoiceStyle::Cheerful => {
-                VoiceSegment::with_expression(text, azure_tts::Style::Cheerful)
+                azure_tts::VoiceSegment::with_expression(text, azure_tts::Style::Cheerful)
             }
         };
         segments.push(contents);
@@ -271,5 +317,23 @@ impl SpeechService {
             }
         }
         Ok(())
+    }
+
+    pub fn pause(&self) {
+        self.audio_sender.send(AudioPlayerCommand::Pause).unwrap();
+    }
+
+    pub fn resume(&self) {
+        self.audio_sender.send(AudioPlayerCommand::Resume).unwrap();
+    }
+
+    pub fn stop(&self) {
+        self.audio_sender.send(AudioPlayerCommand::Stop).unwrap();
+    }
+
+    pub fn volume(&self, volume: f32) {
+        self.audio_sender
+            .send(AudioPlayerCommand::Volume(volume))
+            .unwrap();
     }
 }
