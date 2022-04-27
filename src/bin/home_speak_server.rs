@@ -237,7 +237,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let speech_service_clone = speech_service.clone();
     scheduler
         .every(1.day())
-        .at("07:30")
+        .at("09:00")
         .repeating_every(3.minutes())
         .times(10)
         .run(move || {
@@ -246,7 +246,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let current_time = human_current_time();
                 info!("Triggering alarm at {}", &current_time);
                 let message = format!("Good morning! It's currently {} and it's time to get up and actually do something 
-useful for once. Today is your on-call.", current_time);
+useful for once. Today is dentist day!", current_time);
                 speech_service_clone
                     .lock()
                     .await
