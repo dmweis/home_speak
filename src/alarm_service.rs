@@ -1,4 +1,4 @@
-use crate::speech_service::SpeechService;
+use crate::{error::Result, speech_service::SpeechService};
 use actix_web::web::Data;
 use clokwerk::{Job, JobId, TimeUnits};
 use log::*;
@@ -87,4 +87,53 @@ impl AlarmService {
         scheduler.remove_job(alarm_id.0);
         self.alarms.retain(|alarm| alarm.id != alarm_id);
     }
+
+    pub async fn save_alarms_to_file(&self, path: &str) -> Result<()> {
+        let alarm_configs: Vec<SavedAlarm> = self.alarms.iter().map(SavedAlarm::from).collect();
+        let config = SavedAlarmConfig {
+            alarms: alarm_configs,
+        };
+        let json = serde_json::to_string_pretty(&config)?;
+        tokio::fs::write(path, json.as_bytes()).await?;
+        Ok(())
+    }
+
+    pub async fn add_alarms_from_file(&mut self, path: &str) -> Result<()> {
+        let data = tokio::fs::read(path).await?;
+        let config: SavedAlarmConfig = serde_json::from_slice(&data)?;
+        for alarm in config.alarms {
+            self.add_alarm(
+                &alarm.time,
+                alarm.repeat_delay,
+                alarm.repeat_count,
+                alarm.message,
+            )
+            .await;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct SavedAlarm {
+    pub time: String,
+    pub repeat_delay: u32,
+    pub repeat_count: usize,
+    pub message: String,
+}
+
+impl From<&Alarm> for SavedAlarm {
+    fn from(alarm: &Alarm) -> Self {
+        SavedAlarm {
+            time: alarm.time.clone(),
+            repeat_delay: alarm.repeat_delay,
+            repeat_count: alarm.repeat_count,
+            message: alarm.message.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct SavedAlarmConfig {
+    pub alarms: Vec<SavedAlarm>,
 }

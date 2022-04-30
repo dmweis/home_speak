@@ -5,13 +5,15 @@ use serde::Deserialize;
 use std::{path::PathBuf, str};
 
 /// Use default config if no path is provided
-pub fn get_configuration(config: Option<PathBuf>) -> Result<AppConfig, Box<dyn std::error::Error>> {
+pub fn get_configuration(config: Option<PathBuf>) -> Result<AppConfig, anyhow::Error> {
     let mut settings = config::Config::default();
 
     if let Some(config) = config {
         info!("Using configuration from {:?}", config);
         settings.merge(config::File::with_name(
-            config.to_str().ok_or("Failed to convert path")?,
+            config
+                .to_str()
+                .ok_or_else(|| anyhow::anyhow!("Failed to convert path"))?,
         ))?;
     } else {
         info!("Using default configuration");
@@ -31,6 +33,8 @@ pub struct AppConfig {
     pub server_config: ServerConfig,
     #[serde(default)]
     pub skip_intro: bool,
+    #[serde(default)]
+    pub alarm_config: AlarmConfig,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -45,4 +49,9 @@ pub struct TtsServiceConfig {
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
+}
+
+#[derive(Deserialize, Debug, Clone, Default)]
+pub struct AlarmConfig {
+    pub save_file_path: Option<String>,
 }

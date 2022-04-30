@@ -7,3 +7,6 @@ dev_settings.yaml
 
 # vscode settings
 .vscode
+
+# saved_alarms
+saved_alarms.json

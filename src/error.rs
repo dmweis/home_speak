@@ -19,4 +19,6 @@ pub enum HomeSpeakError {
     GoogleTtsError,
     #[error("azure tts error")]
     AzureTtsError(#[from] azure_tts::TtsError),
+    #[error("serialisation error")]
+    SerializationError(#[from] serde_json::Error),
 }

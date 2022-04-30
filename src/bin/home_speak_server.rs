@@ -3,7 +3,7 @@ use actix_files::NamedFile;
 use actix_web::{delete, get, post, web, App, HttpResponse, HttpServer, Responder};
 use home_speak::{
     alarm_service::{Alarm, AlarmId, AlarmService},
-    configuration::get_configuration,
+    configuration::{get_configuration, AlarmConfig},
     speech_service::{AzureVoiceStyle, SpeechService, TtsService},
     template_messages::{generate_startup_message, human_current_time},
 };
@@ -210,6 +210,7 @@ struct AlarmData {
 #[post("alarm")]
 async fn create_alarm(
     alarm_service: web::Data<Mutex<AlarmService>>,
+    alarm_config: web::Data<AlarmConfig>,
     settings: web::Json<AlarmData>,
 ) -> impl Responder {
     let mut alarm_service = alarm_service.lock().await;
@@ -222,6 +223,12 @@ async fn create_alarm(
             settings.message.clone(),
         )
         .await;
+    if let Some(ref config_path) = alarm_config.save_file_path {
+        if let Err(e) = alarm_service.save_alarms_to_file(config_path).await {
+            error!("Error saving alarms {}", e);
+            return HttpResponse::InternalServerError().finish();
+        }
+    }
     HttpResponse::Ok().finish()
 }
 
@@ -241,11 +248,18 @@ async fn list_alarms(alarm_service: web::Data<Mutex<AlarmService>>) -> impl Resp
 #[delete("alarm/{id}")]
 async fn delete_alarm(
     alarm_service: web::Data<Mutex<AlarmService>>,
+    alarm_config: web::Data<AlarmConfig>,
     id: web::Path<AlarmId>,
 ) -> impl Responder {
     let mut alarm_service = alarm_service.lock().await;
     info!("Deleting alarm {:?}", *id);
     alarm_service.remove(*id).await;
+    if let Some(ref config_path) = alarm_config.save_file_path {
+        if let Err(e) = alarm_service.save_alarms_to_file(config_path).await {
+            error!("Error saving alarms {}", e);
+            return HttpResponse::InternalServerError().finish();
+        }
+    }
     HttpResponse::Ok().finish()
 }
 
@@ -279,7 +293,7 @@ struct Opts {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> anyhow::Result<()> {
     setup_logging();
     let opts = Opts::from_args();
 
@@ -304,6 +318,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         speech_service.clone(),
     )));
 
+    if let Some(ref path) = app_config.alarm_config.save_file_path {
+        if let Err(e) = alarm_service.lock().await.add_alarms_from_file(path).await {
+            error!("Failed to read saved alarms from {} with error {}", path, e);
+            return Err(anyhow::anyhow!("Failed to read saved alarms {}", e));
+        }
+    }
+
     let address = format!(
         "{}:{}",
         app_config.server_config.host, app_config.server_config.port
@@ -311,6 +332,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     HttpServer::new(move || {
         let port = web::Data::new(BoundPort(app_config.server_config.port));
+        let alarm_config = web::Data::new(app_config.alarm_config.clone());
 
         App::new()
             .service(intro_handler)
@@ -331,10 +353,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .app_data(speech_service.clone())
             .app_data(port)
             .app_data(alarm_service.clone())
+            .app_data(alarm_config)
     })
     .bind(address)?
     .run()
     .await?;
+
     Ok(())
 }
 
