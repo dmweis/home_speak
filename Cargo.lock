@@ -455,10 +455,11 @@ checksum = "4bfbf56724aa9eca8afa4fcfadeb479e722935bb2a0900c2d37e0cc477af0688"
 [[package]]
 name = "clokwerk"
 version = "0.4.0-rc1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cca22ab3f48e39a5e8432ea296da1063b3d000c3d3c37da9fa586961e21bf73"
+source = "git+https://github.com/dmweis/clokwerk?branch=main#1a41559038123ca0133cddf94e7f7bffe68e1c60"
 dependencies = [
  "chrono",
+ "serde 1.0.136",
+ "uuid",
 ]
 
 [[package]]
@@ -2363,6 +2364,17 @@ dependencies = [
  "idna",
  "matches",
  "percent-encoding",
+]
+
+[[package]]
+name = "uuid"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8cfcd319456c4d6ea10087ed423473267e1a071f3bc0aa89f80d60997843c6f0"
+dependencies = [
+ "getrandom",
+ "rand",
+ "serde 1.0.136",
 ]
 
 [[package]]

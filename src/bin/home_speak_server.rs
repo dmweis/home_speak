@@ -1,6 +1,6 @@
-use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
-use clokwerk::{Job, TimeUnits};
+use actix_web::{delete, get, post, web, App, HttpResponse, HttpServer, Responder};
 use home_speak::{
+    alarm_service::{Alarm, AlarmId, AlarmService},
     configuration::get_configuration,
     speech_service::{AzureVoiceStyle, SpeechService, TtsService},
     template_messages::{generate_startup_message, human_current_time},
@@ -195,6 +195,58 @@ async fn set_volume(
     HttpResponse::Ok().finish()
 }
 
+#[derive(serde::Deserialize)]
+struct AlarmData {
+    message: String,
+    time: String,
+    #[serde(default)]
+    repeat_delay: u32,
+    #[serde(default)]
+    repeat_count: usize,
+}
+
+#[post("alarm")]
+async fn create_alarm(
+    alarm_service: web::Data<Mutex<AlarmService>>,
+    settings: web::Json<AlarmData>,
+) -> impl Responder {
+    let mut alarm_service = alarm_service.lock().await;
+    info!("Creating a new alarm for {}", settings.time);
+    alarm_service
+        .add_alarm(
+            &settings.time,
+            settings.repeat_delay,
+            settings.repeat_count,
+            settings.message.clone(),
+        )
+        .await;
+    HttpResponse::Ok().finish()
+}
+
+#[derive(serde::Serialize)]
+struct AlarmList {
+    alarms: Vec<Alarm>,
+}
+
+#[get("alarm")]
+async fn list_alarms(alarm_service: web::Data<Mutex<AlarmService>>) -> impl Responder {
+    let alarm_service = alarm_service.lock().await;
+    web::Json(AlarmList {
+        alarms: alarm_service.alarms(),
+    })
+}
+
+#[delete("alarm/{id}")]
+async fn delete_alarm(
+    alarm_service: web::Data<Mutex<AlarmService>>,
+    id: web::Path<AlarmId>,
+) -> impl Responder {
+    let mut alarm_service = alarm_service.lock().await;
+    info!("Deleting alarm {:?}", *id);
+    alarm_service.remove(*id).await;
+    HttpResponse::Ok().finish()
+}
+
 #[derive(Debug, Clone, Copy)]
 struct BoundPort(u16);
 
@@ -231,46 +283,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let speech_service = web::Data::new(tokio::sync::Mutex::new(speech_service));
 
-    // Test alarms
-    // This sounds way to positive. I need it to say something long and annoying
-    let mut scheduler = clokwerk::AsyncScheduler::new();
-    let speech_service_clone = speech_service.clone();
-    scheduler
-        .every(1.day())
-        .at("09:00")
-        .repeating_every(3.minutes())
-        .times(10)
-        .run(move || {
-            let speech_service_clone = speech_service_clone.clone();
-            async move {
-                let current_time = human_current_time();
-                info!("Triggering alarm at {}", &current_time);
-                let message = format!("Good morning! It's currently {} and it's time to get up and actually do something 
-useful for once. Today is dentist day!", current_time);
-                speech_service_clone
-                    .lock()
-                    .await
-                    .say_azure_with_feelings(&message, AzureVoiceStyle::Cheerful)
-                    .await
-                    .unwrap();
-                let bee_movie = "According to all known laws of aviation, there is no way a bee should 
-be able to fly. It's wings are too small to get its fat little body off the ground. The bee, of course, flies 
-anyway, because bees don't care what humans think is impossible.";
-                speech_service_clone
-                    .lock()
-                    .await
-                    .say_azure_with_feelings(bee_movie, AzureVoiceStyle::Angry)
-                    .await
-                    .unwrap();
-            }
-        });
-
-    tokio::spawn(async move {
-        loop {
-            scheduler.run_pending().await;
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-        }
-    });
+    let alarm_service = web::Data::new(tokio::sync::Mutex::new(AlarmService::new(
+        speech_service.clone(),
+    )));
 
     let address = format!(
         "{}:{}",
@@ -292,8 +307,12 @@ anyway, because bees don't care what humans think is impossible.";
             .service(resume)
             .service(stop)
             .service(set_volume)
+            .service(create_alarm)
+            .service(list_alarms)
+            .service(delete_alarm)
             .app_data(speech_service.clone())
             .app_data(port)
+            .app_data(alarm_service.clone())
     })
     .bind(address)?
     .run()
