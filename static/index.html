@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alarms</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.2.33/dist/vue.global.js"></script>
+
+</head>
+
+<body>
+    <div id="app">
+        <input v-model="alarm_time" type="time" step="300"><br>
+        <input v-model="alarm_message" placeholder="alarm message"><br>
+        <label>repeat delay (min)</label>
+        <input v-model="alarm_repeat_delay" type="number"><br>
+        <label>repeat count</label>
+        <input v-model="alarm_repeat_count" type="number"><br>
+        <button @click="create_alarm">
+            Create alarm
+        </button>
+        <br><br>
+        <button @click="fetch_alarms">
+            fetch alarms
+        </button><br>
+        Alarms:
+        <ul>
+            <li v-for="alarm in alarms">
+                At {{ alarm.time }} every {{ alarm.repeat_delay }} (min) count {{ alarm.repeat_count }}<br>
+                {{ alarm.message }}<br>
+                <button @click="delete_alarm(alarm.id)">delete</button>
+            </li>
+        </ul>
+    </div>
+    <script type="module">
+        Vue.createApp({
+            data() {
+                return {
+                    alarm_time: "08:00",
+                    alarm_message: "",
+                    alarm_repeat_delay: 0,
+                    alarm_repeat_count: 0,
+                    alarms: []
+                }
+            },
+            created() {
+                this.fetch_alarms();
+            },
+            methods: {
+                async fetch_alarms() {
+                    const response = await fetch("/alarm");
+                    const json_data = await response.json();
+                    this.alarms = json_data.alarms;
+                },
+                async create_alarm() {
+                    const time = this.alarm_time;
+                    const message = this.alarm_message;
+                    const repeat_delay = this.alarm_repeat_delay;
+                    const repeat_count = this.alarm_repeat_count;
+                    // should this clear?
+                    const alarm = {
+                        time: time,
+                        message: message,
+                        repeat_delay: repeat_delay,
+                        repeat_count: repeat_count
+                    };
+                    const response = await fetch("/alarm", {
+                        method: "POST",
+                        body: JSON.stringify(alarm),
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                    });
+                    await this.fetch_alarms();
+                },
+                async delete_alarm(id) {
+                    const response = await fetch("/alarm/" + id, {
+                        method: "DELETE",
+                    });
+                    await this.fetch_alarms();
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+
+</html>

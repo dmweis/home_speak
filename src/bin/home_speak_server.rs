@@ -1,3 +1,4 @@
+use actix_files::NamedFile;
 use actix_web::{delete, get, post, web, App, HttpResponse, HttpServer, Responder};
 use home_speak::{
     alarm_service::{Alarm, AlarmId, AlarmService},
@@ -247,6 +248,11 @@ async fn delete_alarm(
     HttpResponse::Ok().finish()
 }
 
+#[get("/")]
+async fn index() -> impl Responder {
+    NamedFile::open_async("static/index.html").await
+}
+
 #[derive(Debug, Clone, Copy)]
 struct BoundPort(u16);
 
@@ -310,6 +316,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .service(create_alarm)
             .service(list_alarms)
             .service(delete_alarm)
+            .service(index)
             .app_data(speech_service.clone())
             .app_data(port)
             .app_data(alarm_service.clone())
