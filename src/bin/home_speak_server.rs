@@ -1,3 +1,4 @@
+#[cfg(feature = "hotreload")]
 use actix_files::NamedFile;
 use actix_web::{delete, get, post, web, App, HttpResponse, HttpServer, Responder};
 use home_speak::{
@@ -248,9 +249,19 @@ async fn delete_alarm(
     HttpResponse::Ok().finish()
 }
 
+#[cfg(feature = "hotreload")]
 #[get("/")]
 async fn index() -> impl Responder {
     NamedFile::open_async("static/index.html").await
+}
+
+#[cfg(not(feature = "hotreload"))]
+#[get("/")]
+async fn index() -> impl Responder {
+    let file = include_str!("../../static/index.html");
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(file)
 }
 
 #[derive(Debug, Clone, Copy)]
