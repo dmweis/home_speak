@@ -85,6 +85,9 @@ impl AlarmService {
             style,
             id: AlarmId(job_id),
         });
+        // sort after insertion
+        self.alarms.sort_by(|a, b| a.time.cmp(&b.time));
+        Ok(())
     }
 
     pub fn alarms(&self) -> Vec<Alarm> {
@@ -111,6 +114,7 @@ impl AlarmService {
         let data = tokio::fs::read(path).await?;
         let config: SavedAlarmConfig = serde_json::from_slice(&data)?;
         for alarm in config.alarms {
+            // this sorts after each insertion but who cares?
             self.add_alarm(
                 &alarm.time,
                 alarm.repeat_delay,
