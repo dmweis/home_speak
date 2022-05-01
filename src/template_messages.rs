@@ -9,7 +9,7 @@ use std::str;
 pub fn generate_startup_message(port: u16) -> Vec<String> {
     let mut message_buffer = vec![];
     message_buffer.push(String::from("Good morning, my name is Joy!"));
-    message_buffer.push(format!("It's {}. ", human_current_date_time()));
+    message_buffer.push(format!("It's {}. ", get_human_current_date_time()));
     // TODO(David): Extract this
     // probably use some templating engine too
     if let Ok(network_interfaces) = list_afinet_netifas() {
@@ -72,21 +72,21 @@ fn hostname() -> Option<String> {
 // This could use a humanizer library.
 // But this is okay for now I think
 
-pub fn human_current_date_time() -> String {
+pub fn get_human_current_date_time() -> String {
     let now: chrono::DateTime<chrono::Local> = chrono::Local::now();
-    human_date_time(now)
+    humanize_date_time(now)
 }
 
-pub fn human_current_time() -> String {
+pub fn get_human_current_time() -> String {
     let now: chrono::DateTime<chrono::Local> = chrono::Local::now();
-    human_time(now)
+    humanize_time(now)
 }
 
-pub fn human_time(date_time: chrono::DateTime<chrono::Local>) -> String {
+pub fn humanize_time(date_time: chrono::DateTime<chrono::Local>) -> String {
     format!("{}:{:02}, ", date_time.hour(), date_time.minute())
 }
 
-pub fn human_date_time(date_time: chrono::DateTime<chrono::Local>) -> String {
+pub fn humanize_date_time(date_time: chrono::DateTime<chrono::Local>) -> String {
     format!(
         "{}, {} of {:?}, {} at {}:{:02}, ",
         date_time.weekday(),

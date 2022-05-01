@@ -1,6 +1,7 @@
 use crate::{
     error::Result,
     speech_service::{AzureVoiceStyle, SpeechService},
+    template_messages::get_human_current_time,
 };
 use actix_web::web::Data;
 use clokwerk::{Job, JobId, TimeUnits};
@@ -68,10 +69,12 @@ impl AlarmService {
                 let speech_service = speech_service.clone();
                 let message = message.to_owned();
                 async move {
+                    let current_time = get_human_current_time();
+                    let processed_message = message.replace("/time", &current_time);
                     let mut speech_service = speech_service.lock().await;
                     info!("Alarm running");
                     speech_service
-                        .say_azure_with_style(&message, style)
+                        .say_azure_with_style(&processed_message, style)
                         .await
                         .unwrap();
                 }

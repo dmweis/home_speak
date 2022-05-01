@@ -5,7 +5,7 @@ use home_speak::{
     alarm_service::{Alarm, AlarmId, AlarmService},
     configuration::{get_configuration, AlarmConfig},
     speech_service::{AzureVoiceStyle, SpeechService, TtsService},
-    template_messages::{generate_startup_message, human_current_time},
+    template_messages::{generate_startup_message, get_human_current_time},
 };
 use log::*;
 use simplelog::*;
@@ -151,7 +151,7 @@ async fn intro_handler(
 
 #[post("/current_time")]
 async fn current_time_handler(speech_service: web::Data<Mutex<SpeechService>>) -> impl Responder {
-    let current_time = human_current_time();
+    let current_time = get_human_current_time();
     match speech_service
         .lock()
         .await
