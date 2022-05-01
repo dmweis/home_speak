@@ -8,17 +8,113 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alarms</title>
     <script src="https://cdn.jsdelivr.net/npm/vue@3.2.33/dist/vue.global.js"></script>
+    <style>
+        body {
+            font-family: Open Sans, Arial;
+            margin: 40px auto;
+            max-width: 650px;
+            line-height: 1.6;
+            font-size: 18px;
+            color: #222;
+            padding: 0 10px;
+            background-color: #eee;
+
+        }
+
+        button {
+            color: #fff !important;
+            text-transform: uppercase;
+            background: #BF616A;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            transition: all 0.4s ease 0s;
+        }
+
+        button:hover {
+            background: #D08770;
+            -webkit-box-shadow: 0px 5px 40px -10px rgba(0, 0, 0, 0.50);
+            -moz-box-shadow: 0px 5px 40px -10px rgba(0, 0, 0, 0.50);
+            box-shadow: 5px 40px -10px rgba(0, 0, 0, 0.50);
+            transition: all 0.4s ease 0s;
+            border: none;
+        }
+
+        select,
+        input,
+        textarea {
+            margin: 0 5px;
+            border-radius: 5px;
+            border: 1px;
+            padding: 4px;
+            background: #A3BE8C;
+        }
+
+        input[type=time] {
+            padding: 2px 4px;
+        }
+
+        input[type=number] {
+            width: 2em;
+        }
+
+        textarea {
+            margin-left: 0px;
+            min-height: 4em;
+            min-width: 10em;
+        }
+
+        h1,
+        h2,
+        h3 {
+            line-height: 1.2;
+        }
+
+        ul {
+            margin: 0;
+            padding: 0;
+        }
+
+
+        li {
+            display: block;
+            background: #B48EAD;
+            padding: 10px;
+            margin: 20px 0;
+            border-radius: 5px;
+
+        }
+
+        li:nth-child(odd) {
+            background: #A3BE8C;
+        }
+
+
+        li h2 {
+            margin: 0;
+            width: fit-content;
+            display: inline;
+        }
+
+        li button {
+            float: right;
+            margin: 0px;
+        }
+    </style>
 </head>
 
 <body>
     <div id="app">
+        <label>Time</label>
         <input v-model="alarm_time" type="time" step="300"><br>
-        <input v-model="alarm_message" placeholder="alarm message"><br>
-        <label>repeat delay (min)</label>
+        <label>Message</label><br>
+        <textarea v-model="alarm_message" placeholder="alarm message" rows="4"></textarea><br>
+        <label>Repeat delay (min)</label>
         <input v-model="alarm_repeat_delay" type="number"><br>
-        <label>repeat count</label>
+        <label>Repeat count</label>
         <input v-model="alarm_repeat_count" type="number"><br>
-        <label>style</label>
+        <label>Style</label>
         <select v-model="alarm_style">
             <option value="Plain">Plain</option>
             <option value="Cheerful">Cheerful</option>
@@ -28,17 +124,19 @@
         <button @click="create_alarm">
             Create alarm
         </button>
-        <br><br>
+        <br>
         <button @click="fetch_alarms">
             fetch alarms
         </button><br>
-        Alarms:
+        <h2>Alarms</h2>
         <ul>
             <li v-for="alarm in alarms">
-                At {{ alarm.time }} every {{ alarm.repeat_delay }} (min) count {{ alarm.repeat_count }} {{ alarm.style
+                <h2>{{ alarm.time }}</h2>
+                <button @click="delete_alarm(alarm.id)">delete</button><br>
+                <br>
+                Repeats {{ alarm.repeat_count }} times every {{ alarm.repeat_delay }} minutes. Style: {{ alarm.style
                 }}<br>
-                {{ alarm.message }}<br>
-                <button @click="delete_alarm(alarm.id)">delete</button>
+                <label>Message:</label> "{{ alarm.message }}"
             </li>
         </ul>
     </div>
