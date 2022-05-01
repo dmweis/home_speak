@@ -5,13 +5,52 @@ use home_speak::{
     alarm_service::{Alarm, AlarmId, AlarmService},
     configuration::{get_configuration, AlarmConfig},
     speech_service::{AzureVoiceStyle, SpeechService, TtsService},
-    template_messages::{generate_startup_message, get_human_current_time},
+    template_messages::{
+        generate_startup_message, get_human_current_date_time, get_human_current_time,
+    },
 };
 use log::*;
 use simplelog::*;
 use std::{path::PathBuf, str};
 use structopt::StructOpt;
 use tokio::sync::Mutex;
+
+#[derive(serde::Deserialize)]
+struct SayCommand {
+    content: String,
+    style: AzureVoiceStyle,
+    #[serde(default)]
+    template: bool,
+}
+
+#[post("/say")]
+async fn say_json_handler(
+    command: web::Json<SayCommand>,
+    speech_service: web::Data<Mutex<SpeechService>>,
+) -> impl Responder {
+    let message = if command.template {
+        let current_time = get_human_current_time();
+        let current_date_time = get_human_current_date_time();
+        command
+            .content
+            .replace("/time", &current_time)
+            .replace("/date", &current_date_time)
+    } else {
+        command.content.clone()
+    };
+    match speech_service
+        .lock()
+        .await
+        .say_azure_with_style(&message, command.style)
+        .await
+    {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(e) => {
+            error!("Failed to call speech service {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
 
 #[post("/say")]
 async fn say_handler(
@@ -343,6 +382,7 @@ async fn main() -> anyhow::Result<()> {
 
         App::new()
             .service(intro_handler)
+            .service(say_json_handler)
             .service(say_handler)
             .service(current_time_handler)
             .service(sample_azure_languages_handler)

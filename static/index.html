@@ -25,7 +25,8 @@
             color: #fff !important;
             text-transform: uppercase;
             background: #BF616A;
-            margin: 10px 0;
+            margin: 10px 5px;
+            margin-left: 0px;
             padding: 10px;
             border-radius: 5px;
             border: none;
@@ -39,6 +40,11 @@
             box-shadow: 5px 40px -10px rgba(0, 0, 0, 0.50);
             transition: all 0.4s ease 0s;
             border: none;
+        }
+
+        button:disabled,
+        button[disabled] {
+            background-color: #cccccc;
         }
 
         select,
@@ -178,8 +184,11 @@
             <option value="Sad">Sad</option>
             <option value="Angry">Angry</option>
         </select><br>
-        <button @click="create_alarm">
+        <button @click="create_alarm" :disabled="!messageReady">
             Create alarm
+        </button>
+        <button @click="say" :disabled="!messageReady">
+            Test phrase
         </button>
         <br>
         <button @click="fetch_alarms">
@@ -248,6 +257,28 @@
                         method: "DELETE",
                     });
                     await this.fetch_alarms();
+                },
+                async say() {
+                    const content = this.alarm_message;
+                    const style = this.alarm_style;
+                    // should this clear?
+                    const command = {
+                        content: content,
+                        style: style,
+                        template: true,
+                    };
+                    const response = await fetch("/say", {
+                        method: "POST",
+                        body: JSON.stringify(command),
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                    });
+                }
+            },
+            computed: {
+                messageReady() {
+                    return !!this.alarm_message;
                 }
             }
         }).mount('#app');
