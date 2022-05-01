@@ -134,8 +134,9 @@
                 <h2>{{ alarm.time }}</h2>
                 <button @click="delete_alarm(alarm.id)">delete</button><br>
                 <br>
-                Repeats {{ alarm.repeat_count }} times every {{ alarm.repeat_delay }} minutes. Style: {{ alarm.style
-                }}<br>
+                <strong>{{ alarm.style }}</strong> message repeats <strong>{{ alarm.repeat_count }}</strong> times every
+                <strong>{{ alarm.repeat_delay }}</strong>
+                minutes.<br>
                 <label>Message:</label> "{{ alarm.message }}"
             </li>
         </ul>
