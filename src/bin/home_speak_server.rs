@@ -205,6 +205,8 @@ struct AlarmData {
     repeat_delay: u32,
     #[serde(default)]
     repeat_count: usize,
+    #[serde(default)]
+    style: AzureVoiceStyle,
 }
 
 #[post("alarm")]
@@ -221,6 +223,7 @@ async fn create_alarm(
             settings.repeat_delay,
             settings.repeat_count,
             settings.message.clone(),
+            settings.style,
         )
         .await;
     if let Some(ref config_path) = alarm_config.save_file_path {

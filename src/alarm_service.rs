@@ -1,4 +1,7 @@
-use crate::{error::Result, speech_service::SpeechService};
+use crate::{
+    error::Result,
+    speech_service::{AzureVoiceStyle, SpeechService},
+};
 use actix_web::web::Data;
 use clokwerk::{Job, JobId, TimeUnits};
 use log::*;
@@ -12,6 +15,7 @@ pub struct Alarm {
     pub repeat_delay: u32,
     pub repeat_count: usize,
     pub message: String,
+    pub style: AzureVoiceStyle,
     id: AlarmId,
 }
 
@@ -50,6 +54,7 @@ impl AlarmService {
         repeat_delay: u32,
         repeat_count: usize,
         message: String,
+        style: AzureVoiceStyle,
     ) {
         let mut scheduler = self.scheduler.lock().await;
         let speech_service = self.speech_service.clone();
@@ -65,7 +70,10 @@ impl AlarmService {
                 async move {
                     let mut speech_service = speech_service.lock().await;
                     info!("Alarm running");
-                    speech_service.say_azure(&message).await.unwrap();
+                    speech_service
+                        .say_azure_with_style(&message, style)
+                        .await
+                        .unwrap();
                 }
             })
             .id();
@@ -74,6 +82,7 @@ impl AlarmService {
             repeat_count,
             repeat_delay,
             message: message_clone,
+            style,
             id: AlarmId(job_id),
         });
     }
@@ -107,6 +116,7 @@ impl AlarmService {
                 alarm.repeat_delay,
                 alarm.repeat_count,
                 alarm.message,
+                alarm.style,
             )
             .await;
         }
@@ -120,6 +130,8 @@ pub struct SavedAlarm {
     pub repeat_delay: u32,
     pub repeat_count: usize,
     pub message: String,
+    #[serde(default)]
+    pub style: AzureVoiceStyle,
 }
 
 impl From<&Alarm> for SavedAlarm {
@@ -129,6 +141,7 @@ impl From<&Alarm> for SavedAlarm {
             repeat_delay: alarm.repeat_delay,
             repeat_count: alarm.repeat_count,
             message: alarm.message.clone(),
+            style: alarm.style,
         }
     }
 }
