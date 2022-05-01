@@ -111,6 +111,45 @@
         .minusButton {
             margin-left: 10px;
         }
+
+        .tooltipElement {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltipText {
+            visibility: hidden;
+            width: fit-content;
+            background-color: #5E81AC;
+            color: #fff;
+            text-align: center;
+            border-radius: 5px;
+            padding: 5px 10px;
+
+            /* position */
+            position: absolute;
+            z-index: 1;
+            top: 0px;
+            left: 105%;
+            opacity: 0;
+            transition: visibility 0.3s linear, opacity 0.3s linear;
+        }
+
+        .tooltipElement:hover .tooltipText {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .tooltipElement .tooltipText::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            right: 100%;
+            margin-top: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: transparent #5E81AC transparent transparent;
+        }
     </style>
 </head>
 
@@ -119,7 +158,11 @@
         <label>Time</label>
         <input v-model="alarm_time" type="time" step="300"><br>
         <label>Message</label><br>
-        <textarea v-model="alarm_message" placeholder="alarm message" rows="4"></textarea><br>
+        <div class="tooltipElement">
+            <textarea v-model="alarm_message" placeholder="alarm message" rows="4">
+            </textarea>
+            <span class="tooltipText"><strong>/time</strong> or <strong>/date</strong></span>
+        </div><br>
         <label>Repeat delay (min)</label>
         <button class="inputButton minusButton" @click="alarm_repeat_delay--">-</button>
         <input v-model="alarm_repeat_delay" type="number" min="1">
