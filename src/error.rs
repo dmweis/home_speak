@@ -1,3 +1,4 @@
+use chrono::format::ParseError;
 use thiserror::Error;
 
 pub(crate) type Result<T> = std::result::Result<T, HomeSpeakError>;
@@ -21,4 +22,6 @@ pub enum HomeSpeakError {
     AzureTtsError(#[from] azure_tts::TtsError),
     #[error("serialisation error")]
     SerializationError(#[from] serde_json::Error),
+    #[error("time format parse error")]
+    TimeFormatParseError(#[from] ParseError),
 }

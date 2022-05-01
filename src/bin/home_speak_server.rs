@@ -217,7 +217,7 @@ async fn create_alarm(
 ) -> impl Responder {
     let mut alarm_service = alarm_service.lock().await;
     info!("Creating a new alarm for {}", settings.time);
-    alarm_service
+    if let Err(e) = alarm_service
         .add_alarm(
             &settings.time,
             settings.repeat_delay,
@@ -225,7 +225,11 @@ async fn create_alarm(
             settings.message.clone(),
             settings.style,
         )
-        .await;
+        .await
+    {
+        error!("Failed to add alarm {}", e);
+        return HttpResponse::BadRequest().finish();
+    }
     if let Some(ref config_path) = alarm_config.save_file_path {
         if let Err(e) = alarm_service.save_alarms_to_file(config_path).await {
             error!("Error saving alarms {}", e);

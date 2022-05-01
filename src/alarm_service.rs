@@ -55,13 +55,13 @@ impl AlarmService {
         repeat_count: usize,
         message: String,
         style: AzureVoiceStyle,
-    ) {
+    ) -> Result<()> {
         let mut scheduler = self.scheduler.lock().await;
         let speech_service = self.speech_service.clone();
         let message_clone = message.clone();
         let job_id = scheduler
             .every(1.day())
-            .at(time)
+            .try_at(time)?
             .repeating_every(repeat_delay.minutes())
             .times(repeat_count)
             .run(move || {
@@ -122,7 +122,7 @@ impl AlarmService {
                 alarm.message,
                 alarm.style,
             )
-            .await;
+            .await?;
         }
         Ok(())
     }
