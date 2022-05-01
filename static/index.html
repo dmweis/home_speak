@@ -47,7 +47,7 @@
             margin: 0 5px;
             border-radius: 5px;
             border: 1px;
-            padding: 4px;
+            padding: 10px;
             background: #A3BE8C;
         }
 
@@ -57,6 +57,7 @@
 
         input[type=number] {
             width: 2em;
+            margin: 0px;
         }
 
         textarea {
@@ -101,6 +102,15 @@
             float: right;
             margin: 0px;
         }
+
+        .inputButton {
+            margin: 4px 4px;
+            padding: 10px 20px;
+        }
+
+        .minusButton {
+            margin-left: 10px;
+        }
     </style>
 </head>
 
@@ -111,9 +121,13 @@
         <label>Message</label><br>
         <textarea v-model="alarm_message" placeholder="alarm message" rows="4"></textarea><br>
         <label>Repeat delay (min)</label>
-        <input v-model="alarm_repeat_delay" type="number"><br>
+        <button class="inputButton minusButton" @click="alarm_repeat_delay--">-</button>
+        <input v-model="alarm_repeat_delay" type="number" min="1">
+        <button class="inputButton" @click="alarm_repeat_delay++">+</button><br>
         <label>Repeat count</label>
-        <input v-model="alarm_repeat_count" type="number"><br>
+        <button class="inputButton minusButton" @click="alarm_repeat_count--">-</button>
+        <input v-model="alarm_repeat_count" type="number">
+        <button class="inputButton" @click="alarm_repeat_count++">+</button><br>
         <label>Style</label>
         <select v-model="alarm_style">
             <option value="Plain">Plain</option>
@@ -148,7 +162,7 @@
                 return {
                     alarm_time: "08:00",
                     alarm_message: "",
-                    alarm_repeat_delay: 0,
+                    alarm_repeat_delay: 1,
                     alarm_repeat_count: 0,
                     alarm_style: "Plain",
                     alarms: []
