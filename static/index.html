@@ -107,6 +107,7 @@
         li button {
             float: right;
             margin: 0px;
+            margin-left: 5px;
         }
 
         .inputButton {
@@ -198,7 +199,8 @@
         <ul>
             <li v-for="alarm in alarms">
                 <h2>{{ alarm.time }}</h2>
-                <button @click="delete_alarm(alarm.id)">delete</button><br>
+                <button @click="delete_alarm(alarm.id)">delete</button>
+                <button @click="load_alarm(alarm)">load</button>
                 <br>
                 <strong>{{ alarm.style }}</strong> message repeats <strong>{{ alarm.repeat_count }}</strong> times every
                 <strong>{{ alarm.repeat_delay }}</strong>
@@ -257,6 +259,13 @@
                         method: "DELETE",
                     });
                     await this.fetch_alarms();
+                },
+                load_alarm(alarm) {
+                    this.alarm_time = alarm.time;
+                    this.alarm_message = alarm.message;
+                    this.alarm_repeat_count = alarm.repeat_count;
+                    this.alarm_repeat_delay = alarm.repeat_delay;
+                    this.alarm_style = alarm.style;
                 },
                 async say() {
                     const content = this.alarm_message;
