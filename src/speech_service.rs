@@ -292,11 +292,7 @@ impl SpeechService {
             .await
     }
 
-    pub async fn say_azure_with_feelings(
-        &mut self,
-        text: &str,
-        style: AzureVoiceStyle,
-    ) -> Result<()> {
+    pub async fn say_azure_with_style(&mut self, text: &str, style: AzureVoiceStyle) -> Result<()> {
         // This cloning here is lame...
         self.say_azure_with_voice(text, &self.azure_voice.clone(), style)
             .await

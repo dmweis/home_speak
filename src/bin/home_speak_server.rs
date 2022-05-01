@@ -47,7 +47,7 @@ async fn say_angry_handler(
         if let Err(e) = speech_service
             .lock()
             .await
-            .say_azure_with_feelings(text, AzureVoiceStyle::Angry)
+            .say_azure_with_style(text, AzureVoiceStyle::Angry)
             .await
         {
             error!("Failed to call speech service {}", e);
@@ -70,7 +70,7 @@ async fn say_sad_handler(
         if let Err(e) = speech_service
             .lock()
             .await
-            .say_azure_with_feelings(text, AzureVoiceStyle::Sad)
+            .say_azure_with_style(text, AzureVoiceStyle::Sad)
             .await
         {
             error!("Failed to call speech service {}", e);
@@ -93,7 +93,7 @@ async fn say_cheerful_handler(
         if let Err(e) = speech_service
             .lock()
             .await
-            .say_azure_with_feelings(text, AzureVoiceStyle::Cheerful)
+            .say_azure_with_style(text, AzureVoiceStyle::Cheerful)
             .await
         {
             error!("Failed to call speech service {}", e);
