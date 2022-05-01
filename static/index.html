@@ -8,7 +8,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alarms</title>
     <script src="https://cdn.jsdelivr.net/npm/vue@3.2.33/dist/vue.global.js"></script>
-
 </head>
 
 <body>
@@ -19,6 +18,13 @@
         <input v-model="alarm_repeat_delay" type="number"><br>
         <label>repeat count</label>
         <input v-model="alarm_repeat_count" type="number"><br>
+        <label>style</label>
+        <select v-model="alarm_style">
+            <option value="Plain">Plain</option>
+            <option value="Cheerful">Cheerful</option>
+            <option value="Sad">Sad</option>
+            <option value="Angry">Angry</option>
+        </select><br>
         <button @click="create_alarm">
             Create alarm
         </button>
@@ -29,7 +35,8 @@
         Alarms:
         <ul>
             <li v-for="alarm in alarms">
-                At {{ alarm.time }} every {{ alarm.repeat_delay }} (min) count {{ alarm.repeat_count }}<br>
+                At {{ alarm.time }} every {{ alarm.repeat_delay }} (min) count {{ alarm.repeat_count }} {{ alarm.style
+                }}<br>
                 {{ alarm.message }}<br>
                 <button @click="delete_alarm(alarm.id)">delete</button>
             </li>
@@ -44,6 +51,7 @@
                     alarm_message: "",
                     alarm_repeat_delay: 0,
                     alarm_repeat_count: 0,
+                    alarm_style: "Plain",
                     alarms: []
                 }
             },
@@ -61,12 +69,14 @@
                     const message = this.alarm_message;
                     const repeat_delay = this.alarm_repeat_delay;
                     const repeat_count = this.alarm_repeat_count;
+                    const style = this.alarm_style;
                     // should this clear?
                     const alarm = {
                         time: time,
                         message: message,
                         repeat_delay: repeat_delay,
-                        repeat_count: repeat_count
+                        repeat_count: repeat_count,
+                        style: style
                     };
                     const response = await fetch("/alarm", {
                         method: "POST",
@@ -84,7 +94,7 @@
                     await this.fetch_alarms();
                 }
             }
-        }).mount('#app')
+        }).mount('#app');
     </script>
 </body>
 
