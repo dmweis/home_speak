@@ -35,6 +35,7 @@ pub struct AppConfig {
     pub skip_intro: bool,
     #[serde(default)]
     pub alarm_config: AlarmConfig,
+    pub assistant_config: AssistantConfig,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -54,4 +55,10 @@ pub struct ServerConfig {
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct AlarmConfig {
     pub save_file_path: Option<String>,
+}
+
+#[derive(Deserialize, Debug, Clone, Default)]
+pub struct AssistantConfig {
+    pub name: String,
+    pub primary_user_name: String,
 }

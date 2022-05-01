@@ -5,9 +5,7 @@ use home_speak::{
     alarm_service::{Alarm, AlarmId, AlarmService},
     configuration::{get_configuration, AlarmConfig},
     speech_service::{AzureVoiceStyle, SpeechService, TtsService},
-    template_messages::{
-        generate_startup_message, get_human_current_date_time, get_human_current_time,
-    },
+    template_messages::{get_human_current_date_time, get_human_current_time, TemplateEngine},
 };
 use log::*;
 use simplelog::*;
@@ -172,9 +170,9 @@ async fn sample_azure_languages_handler(
 #[post("/intro")]
 async fn intro_handler(
     speech_service: web::Data<Mutex<SpeechService>>,
-    port: web::Data<BoundPort>,
+    template_engine: web::Data<TemplateEngine>,
 ) -> impl Responder {
-    let startup_message = generate_startup_message(port.0);
+    let startup_message = template_engine.startup_message();
     let mut speech_service = speech_service.lock().await;
     for message_portion in startup_message {
         if let Err(e) = speech_service
@@ -324,9 +322,6 @@ async fn index() -> impl Responder {
         .body(file)
 }
 
-#[derive(Debug, Clone, Copy)]
-struct BoundPort(u16);
-
 #[derive(StructOpt, Debug)]
 #[structopt(
     version = "0.1.0",
@@ -351,8 +346,13 @@ async fn main() -> anyhow::Result<()> {
         app_config.tts_service_config.cache_dir_path,
     )?;
 
+    let template_engine = TemplateEngine::new(
+        app_config.assistant_config.clone(),
+        app_config.server_config.port,
+    );
+
     if !app_config.skip_intro {
-        let startup_message = generate_startup_message(app_config.server_config.port);
+        let startup_message = template_engine.startup_message();
         for message_part in startup_message {
             speech_service.say(&message_part, TtsService::Azure).await?;
         }
@@ -377,8 +377,8 @@ async fn main() -> anyhow::Result<()> {
     );
 
     HttpServer::new(move || {
-        let port = web::Data::new(BoundPort(app_config.server_config.port));
         let alarm_config = web::Data::new(app_config.alarm_config.clone());
+        let template_engine = web::Data::new(template_engine.clone());
 
         App::new()
             .service(intro_handler)
@@ -398,7 +398,7 @@ async fn main() -> anyhow::Result<()> {
             .service(delete_alarm)
             .service(index)
             .app_data(speech_service.clone())
-            .app_data(port)
+            .app_data(template_engine)
             .app_data(alarm_service.clone())
             .app_data(alarm_config)
     })
