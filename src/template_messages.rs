@@ -71,6 +71,14 @@ impl TemplateEngine {
 
         message_buffer
     }
+
+    pub fn template_substitute(message: &str) -> String {
+        let current_time = get_human_current_time();
+        let current_date_time = get_human_current_date_time();
+        message
+            .replace("/time", &current_time)
+            .replace("/date", &current_date_time)
+    }
 }
 
 fn network_interfaces() -> Option<Vec<(String, IpAddr)>> {

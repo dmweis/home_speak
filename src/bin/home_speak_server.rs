@@ -5,7 +5,7 @@ use home_speak::{
     alarm_service::{Alarm, AlarmId, AlarmService},
     configuration::{get_configuration, AlarmConfig},
     speech_service::{AzureVoiceStyle, SpeechService, TtsService},
-    template_messages::{get_human_current_date_time, get_human_current_time, TemplateEngine},
+    template_messages::{get_human_current_time, TemplateEngine},
 };
 use log::*;
 use simplelog::*;
@@ -27,12 +27,7 @@ async fn say_json_handler(
     speech_service: web::Data<Mutex<SpeechService>>,
 ) -> impl Responder {
     let message = if command.template {
-        let current_time = get_human_current_time();
-        let current_date_time = get_human_current_date_time();
-        command
-            .content
-            .replace("/time", &current_time)
-            .replace("/date", &current_date_time)
+        TemplateEngine::template_substitute(&command.content)
     } else {
         command.content.clone()
     };
