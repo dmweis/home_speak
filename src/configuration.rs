@@ -36,6 +36,7 @@ pub struct AppConfig {
     #[serde(default)]
     pub alarm_config: AlarmConfig,
     pub assistant_config: AssistantConfig,
+    pub blinds: BlindsConfig,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -61,4 +62,9 @@ pub struct AlarmConfig {
 pub struct AssistantConfig {
     pub name: String,
     pub primary_user_name: String,
+}
+
+#[derive(Deserialize, Debug, Clone, Default)]
+pub struct BlindsConfig {
+    pub url: String,
 }

@@ -917,6 +917,7 @@ dependencies = [
  "log",
  "num-traits 0.2.14",
  "ordinal",
+ "reqwest",
  "rodio",
  "secrecy",
  "serde 1.0.136",

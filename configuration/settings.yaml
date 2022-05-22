@@ -7,3 +7,5 @@ server_config:
 assistant_config:
   name: "Joy"
   primary_user_name: "User"
+blinds:
+  url: "http://blindspi.local:8080"

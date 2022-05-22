@@ -3,6 +3,7 @@ use actix_files::NamedFile;
 use actix_web::{delete, get, post, web, App, HttpResponse, HttpServer, Responder};
 use home_speak::{
     alarm_service::{Alarm, AlarmId, AlarmService},
+    blinds::BlindsController,
     configuration::{get_configuration, AlarmConfig},
     speech_service::{AzureVoiceStyle, SpeechService, TtsService},
     template_messages::{get_human_current_time, TemplateEngine},
@@ -271,6 +272,22 @@ async fn create_alarm(
     HttpResponse::Ok().finish()
 }
 
+#[post("open_blinds")]
+async fn open_blinds(blinds: web::Data<BlindsController>) -> impl Responder {
+    match blinds.open_blinds().await {
+        Ok(()) => HttpResponse::Ok().finish(),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
+
+#[post("close_blinds")]
+async fn close_blinds(blinds: web::Data<BlindsController>) -> impl Responder {
+    match blinds.close_blinds().await {
+        Ok(()) => HttpResponse::Ok().finish(),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
+
 #[derive(serde::Serialize)]
 struct AlarmList {
     alarms: Vec<Alarm>,
@@ -366,6 +383,8 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
+    let blinds = BlindsController::new(app_config.blinds.url.clone());
+
     let address = format!(
         "{}:{}",
         app_config.server_config.host, app_config.server_config.port
@@ -374,6 +393,7 @@ async fn main() -> anyhow::Result<()> {
     HttpServer::new(move || {
         let alarm_config = web::Data::new(app_config.alarm_config.clone());
         let template_engine = web::Data::new(template_engine.clone());
+        let blinds = web::Data::new(blinds.clone());
 
         App::new()
             .service(intro_handler)
@@ -392,10 +412,13 @@ async fn main() -> anyhow::Result<()> {
             .service(list_alarms)
             .service(delete_alarm)
             .service(index)
+            .service(open_blinds)
+            .service(close_blinds)
             .app_data(speech_service.clone())
             .app_data(template_engine)
             .app_data(alarm_service.clone())
             .app_data(alarm_config)
+            .app_data(blinds)
     })
     .bind(address)?
     .run()
