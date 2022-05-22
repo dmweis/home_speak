@@ -86,7 +86,6 @@ fn network_interfaces() -> Option<Vec<(String, IpAddr)>> {
 }
 
 // This isn't a particularly great solution
-#[cfg(target_os = "linux")]
 fn hostname() -> Option<String> {
     if let Ok(output) = Command::new("hostname").output() {
         if let Ok(hostname) = str::from_utf8(&output.stdout) {
@@ -99,11 +98,6 @@ fn hostname() -> Option<String> {
         error!("Failed to run hostname command");
         None
     }
-}
-
-#[cfg(not(target_os = "linux"))]
-fn hostname() -> Option<String> {
-    None
 }
 
 // This could use a humanizer library.
