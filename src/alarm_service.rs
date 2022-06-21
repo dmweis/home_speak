@@ -3,7 +3,6 @@ use crate::{
     speech_service::{AzureVoiceStyle, SpeechService},
     template_messages::TemplateEngine,
 };
-use actix_web::web::Data;
 use clokwerk::{Job, JobId, TimeUnits};
 use log::*;
 use std::sync::Arc;
@@ -22,7 +21,7 @@ pub struct Alarm {
 
 pub struct AlarmService {
     scheduler: Arc<Mutex<clokwerk::AsyncScheduler>>,
-    speech_service: Data<Mutex<SpeechService>>,
+    speech_service: Arc<Mutex<SpeechService>>,
     alarms: Vec<Alarm>,
 }
 
@@ -30,7 +29,7 @@ pub struct AlarmService {
 pub struct AlarmId(JobId);
 
 impl AlarmService {
-    pub fn new(speech_service: Data<Mutex<SpeechService>>) -> Self {
+    pub fn new(speech_service: Arc<Mutex<SpeechService>>) -> Self {
         let scheduler = Arc::new(Mutex::new(clokwerk::AsyncScheduler::new()));
         let service = AlarmService {
             scheduler: scheduler.clone(),
