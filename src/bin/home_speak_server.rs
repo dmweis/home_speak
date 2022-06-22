@@ -63,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    start_mqtt_service(speech_service.clone())?;
+    start_mqtt_service(app_config.clone(), speech_service.clone())?;
 
     let template_engine = Arc::new(Mutex::new(template_engine));
 

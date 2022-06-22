@@ -9,3 +9,7 @@ assistant_config:
   primary_user_name: "User"
 blinds:
   url: "http://blindspi.local:8080"
+mqtt:
+  base_route: "test_speech"
+  broker_host: "homepi.local"
+  client_id: "home_speak_test_instance"

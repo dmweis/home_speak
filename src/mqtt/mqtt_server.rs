@@ -1,15 +1,22 @@
-use super::router::{RouteHandler, Router};
-use crate::speech_service::{AzureVoiceStyle, SpeechService};
-use async_trait::async_trait;
+use super::{router::Router, routes::MotionSensorHandler};
+use crate::configuration::AppConfig;
+use crate::speech_service::SpeechService;
 use log::*;
 use rumqttc::{AsyncClient, Event, Incoming, MqttOptions, QoS};
-use serde::Deserialize;
 use std::{sync::Arc, time::Duration};
 use tokio::sync::mpsc::unbounded_channel;
 use tokio::sync::Mutex;
 
-pub fn start_mqtt_service(speech_service: Arc<Mutex<SpeechService>>) -> anyhow::Result<()> {
-    let mut mqttoptions = MqttOptions::new("home-speak", "homepi.local", 1883);
+pub fn start_mqtt_service(
+    app_config: AppConfig,
+
+    speech_service: Arc<Mutex<SpeechService>>,
+) -> anyhow::Result<()> {
+    let mut mqttoptions = MqttOptions::new(
+        &app_config.mqtt.client_id,
+        &app_config.mqtt.broker_host,
+        app_config.mqtt.broker_port,
+    );
     mqttoptions.set_keep_alive(Duration::from_secs(5));
 
     let (client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
@@ -53,45 +60,4 @@ pub fn start_mqtt_service(speech_service: Arc<Mutex<SpeechService>>) -> anyhow::
     });
 
     Ok(())
-}
-
-struct MotionSensorHandler {
-    speech_service: Arc<Mutex<SpeechService>>,
-}
-
-impl MotionSensorHandler {
-    fn new(speech_service: Arc<Mutex<SpeechService>>) -> Box<Self> {
-        Box::new(Self { speech_service })
-    }
-}
-
-#[async_trait]
-impl RouteHandler for MotionSensorHandler {
-    async fn call(&mut self, _topic: &str, content: &[u8]) -> anyhow::Result<()> {
-        info!("Handling motion sensor data");
-        let motion_sensor: MotionSensorData = serde_json::from_slice(content)?;
-
-        let message = if motion_sensor.occupancy {
-            "Motion sensor triggered"
-        } else {
-            "Motion sensor detects no movement"
-        };
-
-        self.speech_service
-            .lock()
-            .await
-            .say_azure_with_style(message, AzureVoiceStyle::Cheerful)
-            .await?;
-        Ok(())
-    }
-}
-
-#[derive(Default, Debug, Clone, PartialEq, Deserialize)]
-pub struct MotionSensorData {
-    pub battery: i64,
-    pub battery_low: bool,
-    pub linkquality: i64,
-    pub occupancy: bool,
-    pub tamper: bool,
-    pub voltage: i64,
 }

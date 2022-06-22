@@ -37,6 +37,7 @@ pub struct AppConfig {
     pub alarm_config: AlarmConfig,
     pub assistant_config: AssistantConfig,
     pub blinds: BlindsConfig,
+    pub mqtt: MqttConfig,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -67,4 +68,20 @@ pub struct AssistantConfig {
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct BlindsConfig {
     pub url: String,
+}
+
+// weird serde default thing
+const DEFAULT_MQTT_PORT: u16 = 1883;
+
+const fn default_mqtt_port() -> u16 {
+    DEFAULT_MQTT_PORT
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct MqttConfig {
+    pub base_route: String,
+    pub broker_host: String,
+    #[serde(default = "default_mqtt_port")]
+    pub broker_port: u16,
+    pub client_id: String,
 }
