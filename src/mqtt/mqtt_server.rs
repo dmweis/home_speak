@@ -20,11 +20,14 @@ pub fn start_mqtt_service(
         &app_config.mqtt.broker_host,
         app_config.mqtt.broker_port,
     );
+    info!("Starting MQTT server with options {:?}", mqttoptions);
     mqttoptions.set_keep_alive(Duration::from_secs(5));
 
     let (client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
 
     let base_topic = app_config.mqtt.base_route;
+
+    info!("MQTT base topic {}", base_topic);
 
     let (message_sender, mut message_receiver) = unbounded_channel();
 
@@ -106,7 +109,7 @@ pub fn start_mqtt_service(
                 .handle_message(message.topic.clone(), &message.payload)
                 .await
             {
-                Ok(false) => error!("no handler for topic: \"{}\"", &message.topic),
+                Ok(false) => error!("No handler for topic: \"{}\"", &message.topic),
                 Ok(true) => (),
                 Err(e) => error!("Failed running handler with {:?}", e),
             }
