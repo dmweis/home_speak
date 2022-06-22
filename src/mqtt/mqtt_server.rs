@@ -1,4 +1,7 @@
-use super::{router::Router, routes::MotionSensorHandler};
+use super::{
+    router::Router,
+    routes::{MotionSensorHandler, SayCheerfulHandler, SayHandler},
+};
 use crate::configuration::AppConfig;
 use crate::speech_service::SpeechService;
 use log::*;
@@ -21,15 +24,20 @@ pub fn start_mqtt_service(
 
     let (client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
 
+    let base_topic = app_config.mqtt.base_route;
+
     let (message_sender, mut message_receiver) = unbounded_channel();
 
     tokio::spawn(async move {
         loop {
-            let notification = eventloop.poll().await.unwrap();
-            if let Event::Incoming(Incoming::Publish(publish)) = notification {
-                message_sender
-                    .send(publish)
-                    .expect("Failed to publish message");
+            if let Ok(notification) = eventloop.poll().await {
+                if let Event::Incoming(Incoming::Publish(publish)) = notification {
+                    message_sender
+                        .send(publish)
+                        .expect("Failed to publish message");
+                }
+            } else {
+                error!("failed processing mqtt notifications");
             }
         }
     });
@@ -44,17 +52,29 @@ pub fn start_mqtt_service(
 
         router.add_handler(
             "zigbee2mqtt/motion_one",
-            MotionSensorHandler::new(speech_service),
+            MotionSensorHandler::new(speech_service.clone()),
         );
+
+        let say_route = format!("{}/say", base_topic);
+        client.subscribe(&say_route, QoS::AtMostOnce).await.unwrap();
+        router.add_handler(&say_route, SayHandler::new(speech_service.clone()));
+
+        let say_cheerful_route = format!("{}/say/cheerful", base_topic);
+        client
+            .subscribe(&say_cheerful_route, QoS::AtMostOnce)
+            .await
+            .unwrap();
+        router.add_handler(&say_cheerful_route, SayCheerfulHandler::new(speech_service));
 
         loop {
             let message = message_receiver.recv().await.unwrap();
-            if !router
+            match router
                 .handle_message(message.topic.clone(), &message.payload)
                 .await
-                .unwrap()
             {
-                error!("no handler for {}", &message.topic);
+                Ok(false) => error!("no handler for topic: \"{}\"", &message.topic),
+                Ok(true) => (),
+                Err(e) => error!("Failed running handler with {:?}", e),
             }
         }
     });
