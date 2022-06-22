@@ -3,6 +3,7 @@ use actix_files::NamedFile;
 use home_speak::{
     alarm_service::AlarmService,
     configuration::get_configuration,
+    mqtt_server::start_mqtt_service,
     server::start_server,
     speech_service::{SpeechService, TtsService},
     template_messages::TemplateEngine,
@@ -61,6 +62,8 @@ async fn main() -> anyhow::Result<()> {
             return Err(anyhow::anyhow!("Failed to read saved alarms {}", e));
         }
     }
+
+    start_mqtt_service(speech_service.clone())?;
 
     let template_engine = Arc::new(Mutex::new(template_engine));
 
