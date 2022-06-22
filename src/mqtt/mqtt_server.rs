@@ -1,6 +1,6 @@
 use super::{
     router::Router,
-    routes::{MotionSensorHandler, SayHandler, SayMoodHandler},
+    routes::{DoorSensorHandler, MotionSensorHandler, SayHandler, SayMoodHandler},
 };
 use crate::configuration::AppConfig;
 use crate::speech_service::{AzureVoiceStyle, SpeechService};
@@ -52,10 +52,18 @@ pub fn start_mqtt_service(
             .subscribe("zigbee2mqtt/motion_one", QoS::AtMostOnce)
             .await
             .unwrap();
-
         router.add_handler(
             "zigbee2mqtt/motion_one",
             MotionSensorHandler::new(speech_service.clone()),
+        );
+
+        client
+            .subscribe("zigbee2mqtt/main_door", QoS::AtMostOnce)
+            .await
+            .unwrap();
+        router.add_handler(
+            "zigbee2mqtt/main_door",
+            DoorSensorHandler::new(speech_service.clone()),
         );
 
         let say_route = format!("{}/say", base_topic);

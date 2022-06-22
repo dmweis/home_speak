@@ -136,3 +136,49 @@ struct MotionSensorData {
     #[allow(dead_code)]
     pub voltage: i64,
 }
+
+pub struct DoorSensorHandler {
+    speech_service: Arc<Mutex<SpeechService>>,
+}
+
+impl DoorSensorHandler {
+    pub fn new(speech_service: Arc<Mutex<SpeechService>>) -> Box<Self> {
+        Box::new(Self { speech_service })
+    }
+}
+
+#[async_trait]
+impl RouteHandler for DoorSensorHandler {
+    async fn call(&mut self, _topic: &str, content: &[u8]) -> anyhow::Result<()> {
+        info!("Handling door sensor data");
+        let motion_sensor: DoorSensor = serde_json::from_slice(content)?;
+
+        let message = if motion_sensor.contact {
+            "Front door closed"
+        } else {
+            "Front door opened"
+        };
+
+        self.speech_service
+            .lock()
+            .await
+            .say_azure_with_style(message, AzureVoiceStyle::Cheerful)
+            .await?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DoorSensor {
+    #[allow(dead_code)]
+    pub battery: i64,
+    #[allow(dead_code)]
+    pub battery_low: bool,
+    pub contact: bool,
+    #[allow(dead_code)]
+    pub linkquality: i64,
+    #[allow(dead_code)]
+    pub tamper: bool,
+    #[allow(dead_code)]
+    pub voltage: i64,
+}
