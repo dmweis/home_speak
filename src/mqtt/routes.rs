@@ -55,18 +55,22 @@ struct SayCommand {
     template: bool,
 }
 
-pub struct SayCheerfulHandler {
+pub struct SayMoodHandler {
     speech_service: Arc<Mutex<SpeechService>>,
+    style: AzureVoiceStyle,
 }
 
-impl SayCheerfulHandler {
-    pub fn new(speech_service: Arc<Mutex<SpeechService>>) -> Box<Self> {
-        Box::new(Self { speech_service })
+impl SayMoodHandler {
+    pub fn new(speech_service: Arc<Mutex<SpeechService>>, style: AzureVoiceStyle) -> Box<Self> {
+        Box::new(Self {
+            speech_service,
+            style,
+        })
     }
 }
 
 #[async_trait]
-impl RouteHandler for SayCheerfulHandler {
+impl RouteHandler for SayMoodHandler {
     async fn call(&mut self, _topic: &str, content: &[u8]) -> anyhow::Result<()> {
         info!("mqtt say cheerful command");
         let message = from_utf8(content)?;
@@ -75,7 +79,7 @@ impl RouteHandler for SayCheerfulHandler {
             .speech_service
             .lock()
             .await
-            .say_azure_with_style(message, AzureVoiceStyle::Cheerful)
+            .say_azure_with_style(message, self.style)
             .await
         {
             Ok(_) => (),

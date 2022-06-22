@@ -1,9 +1,9 @@
 use super::{
     router::Router,
-    routes::{MotionSensorHandler, SayCheerfulHandler, SayHandler},
+    routes::{MotionSensorHandler, SayHandler, SayMoodHandler},
 };
 use crate::configuration::AppConfig;
-use crate::speech_service::SpeechService;
+use crate::speech_service::{AzureVoiceStyle, SpeechService};
 use log::*;
 use rumqttc::{AsyncClient, Event, Incoming, MqttOptions, QoS};
 use std::{sync::Arc, time::Duration};
@@ -59,12 +59,46 @@ pub fn start_mqtt_service(
         client.subscribe(&say_route, QoS::AtMostOnce).await.unwrap();
         router.add_handler(&say_route, SayHandler::new(speech_service.clone()));
 
+        // moods
         let say_cheerful_route = format!("{}/say/cheerful", base_topic);
         client
             .subscribe(&say_cheerful_route, QoS::AtMostOnce)
             .await
             .unwrap();
-        router.add_handler(&say_cheerful_route, SayCheerfulHandler::new(speech_service));
+        router.add_handler(
+            &say_cheerful_route,
+            SayMoodHandler::new(speech_service.clone(), AzureVoiceStyle::Cheerful),
+        );
+
+        let say_angry_route = format!("{}/say/angry", base_topic);
+        client
+            .subscribe(&say_angry_route, QoS::AtMostOnce)
+            .await
+            .unwrap();
+        router.add_handler(
+            &say_angry_route,
+            SayMoodHandler::new(speech_service.clone(), AzureVoiceStyle::Angry),
+        );
+
+        let say_sad_route = format!("{}/say/sad", base_topic);
+        client
+            .subscribe(&say_sad_route, QoS::AtMostOnce)
+            .await
+            .unwrap();
+        router.add_handler(
+            &say_sad_route,
+            SayMoodHandler::new(speech_service.clone(), AzureVoiceStyle::Sad),
+        );
+
+        let say_plain_route = format!("{}/say/plain", base_topic);
+        client
+            .subscribe(&say_plain_route, QoS::AtMostOnce)
+            .await
+            .unwrap();
+        router.add_handler(
+            &say_plain_route,
+            SayMoodHandler::new(speech_service.clone(), AzureVoiceStyle::Plain),
+        );
 
         loop {
             let message = message_receiver.recv().await.unwrap();
