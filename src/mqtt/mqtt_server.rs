@@ -1,3 +1,4 @@
+use super::router::{RouteHandler, Router};
 use crate::speech_service::{AzureVoiceStyle, SpeechService};
 use async_trait::async_trait;
 use log::*;
@@ -44,6 +45,7 @@ pub fn start_mqtt_service(speech_service: Arc<Mutex<SpeechService>>) -> anyhow::
             if !router
                 .handle_message(message.topic.clone(), &message.payload)
                 .await
+                .unwrap()
             {
                 error!("no handler for {}", &message.topic);
             }
@@ -51,11 +53,6 @@ pub fn start_mqtt_service(speech_service: Arc<Mutex<SpeechService>>) -> anyhow::
     });
 
     Ok(())
-}
-
-#[async_trait]
-trait RouteHandler: Send {
-    async fn call(&mut self, topic: &str, content: &[u8]) -> anyhow::Result<()>;
 }
 
 struct MotionSensorHandler {
@@ -86,26 +83,6 @@ impl RouteHandler for MotionSensorHandler {
             .say_azure_with_style(message, AzureVoiceStyle::Cheerful)
             .await?;
         Ok(())
-    }
-}
-
-#[derive(Default)]
-struct Router {
-    table: std::collections::HashMap<String, Box<dyn RouteHandler>>,
-}
-
-impl Router {
-    fn add_handler(&mut self, topic: &str, handler: Box<dyn RouteHandler>) {
-        self.table.insert(String::from(topic), handler);
-    }
-
-    async fn handle_message(&mut self, topic: String, content: &[u8]) -> bool {
-        if let Some(handler) = self.table.get_mut(&topic) {
-            handler.call(&topic, content).await.unwrap();
-            true
-        } else {
-            false
-        }
     }
 }
 

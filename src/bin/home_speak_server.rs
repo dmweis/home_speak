@@ -3,7 +3,7 @@ use actix_files::NamedFile;
 use home_speak::{
     alarm_service::AlarmService,
     configuration::get_configuration,
-    mqtt_server::start_mqtt_service,
+    mqtt::start_mqtt_service,
     server::start_server,
     speech_service::{SpeechService, TtsService},
     template_messages::TemplateEngine,
