@@ -5,9 +5,14 @@ use crate::{
 };
 use log::*;
 use mqtt_router::Router;
-use rumqttc::{AsyncClient, Event, Incoming, MqttOptions, QoS, SubscribeFilter};
+use rumqttc::{AsyncClient, ConnAck, Event, Incoming, MqttOptions, Publish, QoS, SubscribeFilter};
 use std::{sync::Arc, time::Duration};
 use tokio::sync::{mpsc::unbounded_channel, Mutex};
+
+enum MqttUpdate {
+    Message(Publish),
+    Reconnection(ConnAck),
+}
 
 pub fn start_mqtt_service(
     app_config: AppConfig,
@@ -33,15 +38,21 @@ pub fn start_mqtt_service(
     tokio::spawn(async move {
         loop {
             match eventloop.poll().await {
-                Ok(notification) => {
-                    if let Event::Incoming(Incoming::Publish(publish)) = notification {
-                        if let Err(e) = message_sender.send(publish) {
-                            error!("Error sending message {}", e);
+                Ok(notification) => match notification {
+                    Event::Incoming(Incoming::Publish(publish)) => {
+                        if let Err(e) = message_sender.send(MqttUpdate::Message(publish)) {
+                            eprintln!("Error sending message {}", e);
                         }
                     }
-                }
+                    Event::Incoming(Incoming::ConnAck(con_ack)) => {
+                        if let Err(e) = message_sender.send(MqttUpdate::Reconnection(con_ack)) {
+                            eprintln!("Error sending message {}", e);
+                        }
+                    }
+                    _ => (),
+                },
                 Err(e) => {
-                    error!("Error processing eventloop notifications {}", e);
+                    eprintln!("Error processing eventloop notifications {}", e);
                 }
             }
         }
@@ -123,14 +134,27 @@ pub fn start_mqtt_service(
         client.subscribe_many(topics).await.unwrap();
 
         loop {
-            let message = message_receiver.recv().await.unwrap();
-            match router
-                .handle_message_ignore_errors(&message.topic, &message.payload)
-                .await
-            {
-                Ok(false) => error!("No handler for topic: \"{}\"", &message.topic),
-                Ok(true) => (),
-                Err(e) => error!("Failed running handler with {:?}", e),
+            let update = message_receiver.recv().await.unwrap();
+            match update {
+                MqttUpdate::Message(message) => {
+                    match router
+                        .handle_message_ignore_errors(&message.topic, &message.payload)
+                        .await
+                    {
+                        Ok(false) => error!("No handler for topic: \"{}\"", &message.topic),
+                        Ok(true) => (),
+                        Err(e) => error!("Failed running handler with {:?}", e),
+                    }
+                }
+                MqttUpdate::Reconnection(_) => {
+                    let topics = router
+                        .topics_for_subscription()
+                        .map(|topic| SubscribeFilter {
+                            path: topic.to_owned(),
+                            qos: QoS::AtMostOnce,
+                        });
+                    client.subscribe_many(topics).await.unwrap();
+                }
             }
         }
     });
