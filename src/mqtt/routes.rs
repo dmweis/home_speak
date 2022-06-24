@@ -182,3 +182,54 @@ pub struct DoorSensor {
     #[allow(dead_code)]
     pub voltage: i64,
 }
+
+pub struct SwitchHandler {
+    speech_service: Arc<Mutex<SpeechService>>,
+}
+
+impl SwitchHandler {
+    pub fn new(speech_service: Arc<Mutex<SpeechService>>) -> Box<Self> {
+        Box::new(Self { speech_service })
+    }
+}
+
+#[async_trait]
+impl RouteHandler for SwitchHandler {
+    async fn call(&mut self, topic: &str, content: &[u8]) -> anyhow::Result<()> {
+        info!("Handling switch data");
+        let switch_name = topic.split('/').last().unwrap_or("unknown");
+        let switch_data: SwitchPayload = serde_json::from_slice(content)?;
+
+        let message = match switch_data.action {
+            Action::Single => format!("{switch_name} was clicked once"),
+            Action::Long => format!("{switch_name} was long pressed"),
+            Action::Double => format!("{switch_name} was double clicked"),
+        };
+
+        self.speech_service
+            .lock()
+            .await
+            .say_azure_with_style(&message, AzureVoiceStyle::Cheerful)
+            .await?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Action {
+    Single,
+    Double,
+    Long,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SwitchPayload {
+    pub action: Action,
+    #[allow(dead_code)]
+    pub battery: i64,
+    #[allow(dead_code)]
+    pub linkquality: i64,
+    #[allow(dead_code)]
+    pub voltage: i64,
+}
