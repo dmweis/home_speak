@@ -1,6 +1,4 @@
-use super::routes::{
-    DoorSensorHandler, MotionSensorHandler, SayHandler, SayMoodHandler, SwitchHandler,
-};
+use super::routes::{DoorSensorHandler, SayHandler, SayMoodHandler, SwitchHandler};
 use crate::{
     configuration::AppConfig,
     speech_service::{AzureVoiceStyle, SpeechService},

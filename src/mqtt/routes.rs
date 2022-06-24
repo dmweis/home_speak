@@ -97,6 +97,7 @@ pub struct MotionSensorHandler {
 }
 
 impl MotionSensorHandler {
+    #[allow(dead_code)]
     pub fn new(speech_service: Arc<Mutex<SpeechService>>) -> Box<Self> {
         Box::new(Self { speech_service })
     }
