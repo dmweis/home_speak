@@ -1,13 +1,13 @@
-use super::{
-    router::Router,
-    routes::{DoorSensorHandler, MotionSensorHandler, SayHandler, SayMoodHandler, SwitchHandler},
+use super::routes::{
+    DoorSensorHandler, MotionSensorHandler, SayHandler, SayMoodHandler, SwitchHandler,
 };
 use crate::{
     configuration::AppConfig,
     speech_service::{AzureVoiceStyle, SpeechService},
 };
 use log::*;
-use rumqttc::{AsyncClient, Event, Incoming, MqttOptions};
+use mqtt_router::Router;
+use rumqttc::{AsyncClient, Event, Incoming, MqttOptions, QoS, SubscribeFilter};
 use std::{sync::Arc, time::Duration};
 use tokio::sync::{mpsc::unbounded_channel, Mutex};
 
@@ -116,15 +116,18 @@ pub fn start_mqtt_service(
             )
             .unwrap();
 
-        router
-            .subscribe_to_topics(&client)
-            .await
-            .expect("Failed to subscribe to topics");
+        let topics = router
+            .topics_for_subscription()
+            .map(|topic| SubscribeFilter {
+                path: topic.to_owned(),
+                qos: QoS::AtMostOnce,
+            });
+        client.subscribe_many(topics).await.unwrap();
 
         loop {
             let message = message_receiver.recv().await.unwrap();
             match router
-                .handle_message(message.topic.clone(), &message.payload)
+                .handle_message_ignore_errors(&message.topic, &message.payload)
                 .await
             {
                 Ok(false) => error!("No handler for topic: \"{}\"", &message.topic),

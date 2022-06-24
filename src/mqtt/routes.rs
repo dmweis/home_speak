@@ -1,10 +1,10 @@
-use super::router::RouteHandler;
 use crate::{
     speech_service::{AzureVoiceStyle, SpeechService},
     template_messages::TemplateEngine,
 };
 use async_trait::async_trait;
 use log::*;
+use mqtt_router::{RouteHandler, RouterError};
 use serde::Deserialize;
 use std::{str::from_utf8, sync::Arc};
 use tokio::sync::Mutex;
@@ -21,9 +21,10 @@ impl SayHandler {
 
 #[async_trait]
 impl RouteHandler for SayHandler {
-    async fn call(&mut self, _topic: &str, content: &[u8]) -> anyhow::Result<()> {
+    async fn call(&mut self, _topic: &str, content: &[u8]) -> std::result::Result<(), RouterError> {
         info!("mqtt say command");
-        let command: SayCommand = serde_json::from_slice(content)?;
+        let command: SayCommand =
+            serde_json::from_slice(content).map_err(|err| RouterError::HandlerError(err.into()))?;
 
         let message = if command.template {
             TemplateEngine::template_substitute(&command.content)
@@ -71,9 +72,9 @@ impl SayMoodHandler {
 
 #[async_trait]
 impl RouteHandler for SayMoodHandler {
-    async fn call(&mut self, _topic: &str, content: &[u8]) -> anyhow::Result<()> {
+    async fn call(&mut self, _topic: &str, content: &[u8]) -> std::result::Result<(), RouterError> {
         info!("mqtt say cheerful command");
-        let message = from_utf8(content)?;
+        let message = from_utf8(content).map_err(|err| RouterError::HandlerError(err.into()))?;
 
         match self
             .speech_service
@@ -103,9 +104,10 @@ impl MotionSensorHandler {
 
 #[async_trait]
 impl RouteHandler for MotionSensorHandler {
-    async fn call(&mut self, _topic: &str, content: &[u8]) -> anyhow::Result<()> {
+    async fn call(&mut self, _topic: &str, content: &[u8]) -> std::result::Result<(), RouterError> {
         info!("Handling motion sensor data");
-        let motion_sensor: MotionSensorData = serde_json::from_slice(content)?;
+        let motion_sensor: MotionSensorData =
+            serde_json::from_slice(content).map_err(|err| RouterError::HandlerError(err.into()))?;
 
         let message = if motion_sensor.occupancy {
             "Motion sensor triggered"
@@ -117,7 +119,8 @@ impl RouteHandler for MotionSensorHandler {
             .lock()
             .await
             .say_azure_with_style(message, AzureVoiceStyle::Cheerful)
-            .await?;
+            .await
+            .map_err(|err| RouterError::HandlerError(err.into()))?;
         Ok(())
     }
 }
@@ -149,9 +152,10 @@ impl DoorSensorHandler {
 
 #[async_trait]
 impl RouteHandler for DoorSensorHandler {
-    async fn call(&mut self, _topic: &str, content: &[u8]) -> anyhow::Result<()> {
+    async fn call(&mut self, _topic: &str, content: &[u8]) -> std::result::Result<(), RouterError> {
         info!("Handling door sensor data");
-        let motion_sensor: DoorSensor = serde_json::from_slice(content)?;
+        let motion_sensor: DoorSensor =
+            serde_json::from_slice(content).map_err(|err| RouterError::HandlerError(err.into()))?;
 
         let message = if motion_sensor.contact {
             "Front door closed"
@@ -163,7 +167,8 @@ impl RouteHandler for DoorSensorHandler {
             .lock()
             .await
             .say_azure_with_style(message, AzureVoiceStyle::Cheerful)
-            .await?;
+            .await
+            .map_err(|err| RouterError::HandlerError(err.into()))?;
         Ok(())
     }
 }
@@ -195,10 +200,11 @@ impl SwitchHandler {
 
 #[async_trait]
 impl RouteHandler for SwitchHandler {
-    async fn call(&mut self, topic: &str, content: &[u8]) -> anyhow::Result<()> {
+    async fn call(&mut self, topic: &str, content: &[u8]) -> std::result::Result<(), RouterError> {
         info!("Handling switch data");
         let switch_name = topic.split('/').last().unwrap_or("unknown");
-        let switch_data: SwitchPayload = serde_json::from_slice(content)?;
+        let switch_data: SwitchPayload =
+            serde_json::from_slice(content).map_err(|err| RouterError::HandlerError(err.into()))?;
 
         let message = match switch_data.action {
             Action::Single => format!("{switch_name} was clicked once"),
@@ -210,7 +216,8 @@ impl RouteHandler for SwitchHandler {
             .lock()
             .await
             .say_azure_with_style(&message, AzureVoiceStyle::Cheerful)
-            .await?;
+            .await
+            .map_err(|err| RouterError::HandlerError(err.into()))?;
         Ok(())
     }
 }

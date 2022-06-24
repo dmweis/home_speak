@@ -942,6 +942,7 @@ dependencies = [
  "google_tts",
  "local-ip-address",
  "log",
+ "mqtt-router",
  "num-traits 0.2.14",
  "ordinal",
  "reqwest",
@@ -1348,6 +1349,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9f1c5b025cda876f66ef43a113f91ebc9f4ccef34843000e0adf6ebbab84e21"
 dependencies = [
  "winapi",
+]
+
+[[package]]
+name = "mqtt-router"
+version = "0.1.0"
+source = "git+https://github.com/dmweis/mqtt-router?branch=main#5472ce44e59d7522131c521a26c0cbe97192cde0"
+dependencies = [
+ "async-trait",
+ "thiserror",
 ]
 
 [[package]]
