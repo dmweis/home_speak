@@ -16,7 +16,7 @@ pub fn get_configuration(config: Option<PathBuf>) -> Result<AppConfig, anyhow::E
                 .ok_or_else(|| anyhow::anyhow!("Failed to convert path"))?,
         ))?;
     } else {
-        info!("Using default configuration");
+        info!("Using dev configuration");
         settings
             .merge(config::File::with_name("configuration/settings"))?
             .merge(config::File::with_name("configuration/dev_settings"))?;
