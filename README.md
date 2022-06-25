@@ -65,12 +65,12 @@ Now with partial support!
 
 In case build fails with alsa-sys build stepa you want to install dev dependencies for `alsa`.  
 On debian the package is called `libasound2-dev`.  
+You may also need `libssl-dev` depending on which ssl library you are using.  
 
 ```bash
-sudo apt install libasound2-dev -y
+sudo apt install libssl-dev libasound2-dev -y
 ```
 
-You may also need `libssl-dev` depending on which ssl library you are using.
 
 
 ## Audio on raspberry pi
