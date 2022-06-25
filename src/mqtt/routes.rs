@@ -129,16 +129,16 @@ impl RouteHandler for MotionSensorHandler {
 #[derive(Debug, Deserialize)]
 struct MotionSensorData {
     #[allow(dead_code)]
-    pub battery: i64,
+    pub battery: f32,
     #[allow(dead_code)]
     pub battery_low: bool,
     #[allow(dead_code)]
-    pub linkquality: i64,
+    pub linkquality: f32,
     pub occupancy: bool,
     #[allow(dead_code)]
     pub tamper: bool,
     #[allow(dead_code)]
-    pub voltage: i64,
+    pub voltage: f32,
 }
 
 pub struct DoorSensorHandler {
@@ -177,16 +177,16 @@ impl RouteHandler for DoorSensorHandler {
 #[derive(Debug, Deserialize)]
 pub struct DoorSensor {
     #[allow(dead_code)]
-    pub battery: i64,
+    pub battery: f32,
     #[allow(dead_code)]
     pub battery_low: bool,
     pub contact: bool,
     #[allow(dead_code)]
-    pub linkquality: i64,
+    pub linkquality: f32,
     #[allow(dead_code)]
     pub tamper: bool,
     #[allow(dead_code)]
-    pub voltage: i64,
+    pub voltage: f32,
 }
 
 pub struct SwitchHandler {
@@ -235,9 +235,9 @@ pub enum Action {
 pub struct SwitchPayload {
     pub action: Action,
     #[allow(dead_code)]
-    pub battery: i64,
+    pub battery: f32,
     #[allow(dead_code)]
-    pub linkquality: i64,
+    pub linkquality: f32,
     #[allow(dead_code)]
-    pub voltage: i64,
+    pub voltage: f32,
 }
