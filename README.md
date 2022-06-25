@@ -52,14 +52,15 @@ alarm_config:
 
 build with `cargo build --features hotreload` to get html page hot-reloading otherwise the `html` file is embedded in the binary at compilation.  
 
-## Install
+### Install
 
-Use `install_service` to install as a systemd service.  
-It might be a good idea to transition to something like `cargo-deb` in the future.  
+Use `cargo-deb` to install.  
+There is a make file target under `make install` that will do it locally.  
+Or `make deploy` which will build and rsync the `.deb` file.  
 
-### Cargo deb
+### Config
 
-Now with partial support!
+Config lives under `/etc/home_speak/settings.yaml`. You need to add keys to Azure and GCP there
 
 ## Dependencies
 
@@ -70,8 +71,6 @@ You may also need `libssl-dev` depending on which ssl library you are using.
 ```bash
 sudo apt install libssl-dev libasound2-dev -y
 ```
-
-
 
 ## Audio on raspberry pi
 
