@@ -1,0 +1,4 @@
+tts_service_config:
+  google_api_key: "SUPER_SECRET_TOKEN"
+  azure_api_key: "SUPER_SECRET_TOKEN_BUT_DIFFERENT"
+skip_intro: true
