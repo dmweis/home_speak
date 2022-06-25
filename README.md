@@ -71,3 +71,21 @@ sudo apt install libasound2-dev -y
 ```
 
 You may also need `libssl-dev` depending on which ssl library you are using.
+
+
+## Audio on raspberry pi
+
+depending on if you are running as user or system you'll want to have the following config
+
+```shell
+pcm.!default {
+    type hw
+    card 1
+}
+ctl.!default {
+    type hw
+    card 1
+}
+```
+
+either in `~/.asoundrc` or `/etc/asound.conf`
