@@ -6,7 +6,7 @@ ARM_BUILD_PATH ?= target/debian/home_speak_*.deb
 
 .PHONY: build
 build:
-	cargo build --release
+	cargo build --release --bin home_speak_server
 	cargo deb --no-build
 
 .PHONE: install
