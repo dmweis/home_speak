@@ -347,6 +347,7 @@ pub async fn start_server(
 
     let speech_service = web::Data::from(speech_service);
     let template_engine = web::Data::from(template_engine);
+    let alarm_service = web::Data::from(alarm_service);
     let blinds = web::Data::new(BlindsController::new(app_config.blinds.url.clone()));
 
     HttpServer::new(move || {
