@@ -11,7 +11,7 @@ build:
 
 .PHONE: install
 install: build
-	sudo dpkg -i target/debian/home_speak_*.deb
+	sudo dpkg -i $(ARM_BUILD_PATH)
 
 .PHONY: deploy
 deploy: build
