@@ -6,6 +6,7 @@ Wants=network-online.target
 [Service]
 User=homespeak
 DynamicUser=yes
+Group=audio
 StateDirectory=home_speak
 CacheDirectory=home_speak
 Type=simple
