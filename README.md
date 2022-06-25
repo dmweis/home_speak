@@ -57,6 +57,10 @@ build with `cargo build --features hotreload` to get html page hot-reloading oth
 Use `install_service` to install as a systemd service.  
 It might be a good idea to transition to something like `cargo-deb` in the future.  
 
+### Cargo deb
+
+Now with partial support!
+
 ## Dependencies
 
 In case build fails with alsa-sys build stepa you want to install dev dependencies for `alsa`.  
