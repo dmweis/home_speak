@@ -208,9 +208,9 @@ impl RouteHandler for SwitchHandler {
             serde_json::from_slice(content).map_err(|err| RouterError::HandlerError(err.into()))?;
 
         let message = match switch_data.action {
-            Action::Single => format!("{switch_name} was clicked once"),
-            Action::Long => format!("{switch_name} was long pressed"),
-            Action::Double => format!("{switch_name} was double clicked"),
+            Action::Single => format!("switch {switch_name} was clicked once"),
+            Action::Long => format!("switch {switch_name} was long pressed"),
+            Action::Double => format!("switch {switch_name} was double clicked"),
         };
 
         self.speech_service

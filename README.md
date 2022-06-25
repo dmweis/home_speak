@@ -57,6 +57,10 @@ build with `cargo build --features hotreload` to get html page hot-reloading oth
 Use `install_service` to install as a systemd service.  
 It might be a good idea to transition to something like `cargo-deb` in the future.  
 
+### Cargo deb
+
+Now with partial support!
+
 ## Dependencies
 
 In case build fails with alsa-sys build stepa you want to install dev dependencies for `alsa`.  
@@ -67,3 +71,21 @@ sudo apt install libasound2-dev -y
 ```
 
 You may also need `libssl-dev` depending on which ssl library you are using.
+
+
+## Audio on raspberry pi
+
+depending on if you are running as user or system you'll want to have the following config
+
+```shell
+pcm.!default {
+    type hw
+    card 1
+}
+ctl.!default {
+    type hw
+    card 1
+}
+```
+
+either in `~/.asoundrc` or `/etc/asound.conf`
