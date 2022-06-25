@@ -1,15 +1,17 @@
 tts_service_config:
-  cache_dir_path: "audio_cache"
+  cache_dir_path: "/var/cache/home_speak/audio_cache"
   tts_service: "Azure"
 server_config:
   host: "0.0.0.0"
   port: 3000
 assistant_config:
   name: "Joy"
-  primary_user_name: "User"
+  primary_user_name: "David"
 blinds:
   url: "http://blindspi.local:8080"
 mqtt:
   base_route: "test_speech"
   broker_host: "homepi.local"
   client_id: "home_speak_test_instance"
+alarm_config:
+  save_file_path: "/var/lib/home_speak/saved_alarms.json"
