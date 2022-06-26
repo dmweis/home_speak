@@ -724,6 +724,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "either"
+version = "1.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
+
+[[package]]
 name = "encoding_rs"
 version = "0.8.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1084,6 +1090,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "879d54834c8c76457ef4293a689b2a8c59b076067ad77b15efafbb05f92a592b"
 
 [[package]]
+name = "itertools"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9a9d19fa1e79b6215ff29b9d6880b706147f16e9b1dbb1e4e5947b5b02bc5e3"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1353,10 +1368,11 @@ dependencies = [
 
 [[package]]
 name = "mqtt-router"
-version = "0.1.0"
-source = "git+https://github.com/dmweis/mqtt-router?branch=main#5472ce44e59d7522131c521a26c0cbe97192cde0"
+version = "0.1.1"
+source = "git+https://github.com/dmweis/mqtt-router?branch=main#2fb31d2ab58ba293740b9a9eaf7f6c32fb2e3d64"
 dependencies = [
  "async-trait",
+ "itertools",
  "thiserror",
 ]
 
