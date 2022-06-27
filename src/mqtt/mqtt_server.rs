@@ -1,4 +1,4 @@
-use super::routes::{DoorSensorHandler, SayHandler, SayMoodHandler, SwitchHandler};
+use super::routes::{SayHandler, SayMoodHandler};
 use crate::{
     configuration::AppConfig,
     speech_service::{AzureVoiceStyle, SpeechService},
@@ -60,34 +60,6 @@ pub fn start_mqtt_service(
 
     tokio::spawn(async move {
         let mut router = Router::default();
-
-        // router
-        //     .add_handler(
-        //         "zigbee2mqtt/motion/one",
-        //         MotionSensorHandler::new(speech_service.clone()),
-        //     )
-        //     .unwrap();
-
-        router
-            .add_handler(
-                "zigbee2mqtt/main_door",
-                DoorSensorHandler::new(speech_service.clone()),
-            )
-            .unwrap();
-
-        router
-            .add_handler(
-                "zigbee2mqtt/switch/one",
-                SwitchHandler::new(speech_service.clone()),
-            )
-            .unwrap();
-
-        router
-            .add_handler(
-                "zigbee2mqtt/switch/two",
-                SwitchHandler::new(speech_service.clone()),
-            )
-            .unwrap();
 
         // mood routers
         router
