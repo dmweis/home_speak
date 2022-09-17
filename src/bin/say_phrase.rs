@@ -1,3 +1,4 @@
+use clap::Parser;
 use crossbeam_channel::{unbounded, Sender};
 use home_speak::{
     configuration::get_configuration,
@@ -6,18 +7,12 @@ use home_speak::{
 use log::*;
 use simplelog::*;
 use std::{io::Read, path::PathBuf, str};
-use structopt::StructOpt;
 
-#[derive(StructOpt, Debug)]
-#[structopt(
-    version = "0.1.0",
-    author = "David M. Weis <dweis7@gmail.com>",
-    about = "CLI tool for playing text to speech commands using Google text to speech cloud API"
-)]
+#[derive(Parser, Debug)]
+#[clap(author, version, about)]
 struct Opts {
-    #[structopt()]
     phrases: String,
-    #[structopt(long)]
+    #[clap(long)]
     config: Option<PathBuf>,
 }
 

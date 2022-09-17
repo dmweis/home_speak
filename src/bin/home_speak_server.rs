@@ -1,5 +1,6 @@
 #[cfg(feature = "hotreload")]
 use actix_files::NamedFile;
+use clap::Parser;
 use home_speak::{
     alarm_service::AlarmService,
     configuration::get_configuration,
@@ -11,17 +12,12 @@ use home_speak::{
 use log::*;
 use simplelog::*;
 use std::{path::PathBuf, sync::Arc};
-use structopt::StructOpt;
 use tokio::sync::Mutex;
 
-#[derive(StructOpt, Debug)]
-#[structopt(
-    version = "0.1.0",
-    author = "David M. Weis <dweis7@gmail.com>",
-    about = "CLI tool for playing text to speech commands using Google text to speech cloud API"
-)]
+#[derive(Parser, Debug)]
+#[clap(author, version, about)]
 struct Opts {
-    #[structopt(long)]
+    #[clap(long)]
     config: Option<PathBuf>,
 }
 
