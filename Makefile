@@ -40,6 +40,10 @@ build-artifact: build
 		--output-path $(MENDER_ARTIFACT_OUTPUT_PATH)/$(MENDER_ARTIFACT_FILE) \
 		--file $(ARM_BUILD_PATH)
 
+.PHONY: publish-mender-artifact
+publish-mender-artifact: build-artifact
+	mender-cli artifacts --server https://hosted.mender.io upload $(MENDER_ARTIFACT_OUTPUT_PATH)/$(MENDER_ARTIFACT_FILE)
+
 .PHONY: serve-artifact
 serve-artifact: build-artifact
 	@echo http://$(HOSTNAME):8000
