@@ -59,7 +59,8 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    start_mqtt_service(app_config.clone(), speech_service.clone())?;
+    // TODO: I can't pass the client to the speech service since the speech service needs to be passed here....
+    let _client = start_mqtt_service(app_config.clone(), speech_service.clone())?;
 
     let template_engine = Arc::new(Mutex::new(template_engine));
 

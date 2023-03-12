@@ -7,3 +7,5 @@ pub mod mqtt;
 pub mod server;
 pub mod speech_service;
 pub mod template_messages;
+
+const AUDIO_FILE_EXTENSION: &str = "mp3";

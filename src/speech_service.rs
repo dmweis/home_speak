@@ -1,13 +1,17 @@
 use crate::audio_cache::AudioCache;
 use crate::error::{HomeSpeakError, Result};
+use crate::AUDIO_FILE_EXTENSION;
+use base64::{engine::general_purpose, Engine as _};
 use log::*;
+use rumqttc::AsyncClient;
 use secrecy::{ExposeSecret, Secret};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::io::Seek;
 use std::sync::mpsc::Receiver;
 use std::{
     fs::File,
-    io::Cursor,
+    io::{Cursor, Read},
     sync::mpsc::{channel, Sender},
     thread,
 };
@@ -31,6 +35,8 @@ fn hash_google_tts(text: &str, voice: &google_tts::VoiceProps) -> String {
 
 // Used to invalidate old cache
 const AZURE_FORMAT_VERSION: u32 = 3;
+
+const MQTT_AUDIO_PUB_TOPIC: &str = "transcribed_audio";
 
 fn hash_azure_tts(
     text: &str,
@@ -133,18 +139,42 @@ pub struct SpeechService {
     azure_voice: azure_tts::VoiceSettings,
     azure_audio_format: azure_tts::AudioFormat,
     audio_sender: Sender<AudioPlayerCommand>,
+    // this is so messy...
+    mqtt: Option<(AsyncClient, String)>,
 }
 
-pub trait PlayAble: std::io::Read + std::io::Seek + Send + Sync {}
+pub trait PlayAble: std::io::Read + std::io::Seek + Send + Sync {
+    fn as_bytes(&mut self) -> Result<Vec<u8>>;
+}
 
-impl PlayAble for Cursor<Vec<u8>> {}
-impl PlayAble for File {}
+impl PlayAble for Cursor<Vec<u8>> {
+    fn as_bytes(&mut self) -> Result<Vec<u8>> {
+        Ok(self.get_ref().clone())
+    }
+}
+impl PlayAble for File {
+    fn as_bytes(&mut self) -> Result<Vec<u8>> {
+        let mut buffer = vec![];
+        self.read_to_end(&mut buffer)?;
+        self.seek(std::io::SeekFrom::Start(0))?;
+        Ok(buffer)
+    }
+}
 
 impl SpeechService {
     pub fn new(
         google_api_key: Secret<String>,
         azure_subscription_key: Secret<String>,
         cache_dir_path: Option<String>,
+    ) -> Result<SpeechService> {
+        Self::new_with_mqtt(google_api_key, azure_subscription_key, cache_dir_path, None)
+    }
+
+    pub fn new_with_mqtt(
+        google_api_key: Secret<String>,
+        azure_subscription_key: Secret<String>,
+        cache_dir_path: Option<String>,
+        mqtt: Option<(AsyncClient, String)>,
     ) -> Result<SpeechService> {
         let google_speech_client =
             google_tts::GoogleTtsClient::new(google_api_key.expose_secret().to_owned());
@@ -168,13 +198,35 @@ impl SpeechService {
             azure_voice: azure_tts::EnUsVoices::SaraNeural.to_voice_settings(),
             azure_audio_format: azure_tts::AudioFormat::Audio48khz192kbitrateMonoMp3,
             audio_sender,
+            mqtt,
         })
     }
 
-    async fn play(&mut self, data: Box<dyn PlayAble>) -> Result<()> {
+    async fn play(&mut self, mut data: Box<dyn PlayAble>) -> Result<()> {
+        self.publish_audio_file(&mut data)?;
         self.audio_sender
             .send(AudioPlayerCommand::Play(data))
             .unwrap();
+        Ok(())
+    }
+
+    fn publish_audio_file(&self, data: &mut Box<dyn PlayAble>) -> Result<()> {
+        if let Some((mqtt_client, base_topic)) = self.mqtt.as_ref().cloned() {
+            let payload = data.as_bytes()?;
+            let base64_wav_file: String = general_purpose::STANDARD.encode(payload);
+            let message = AudioMessage {
+                data: base64_wav_file,
+                format: AUDIO_FILE_EXTENSION.to_owned(),
+            };
+            let json = serde_json::to_string_pretty(&message)?;
+            tokio::spawn(async move {
+                let topic = format!("{base_topic}/{MQTT_AUDIO_PUB_TOPIC}");
+                mqtt_client
+                    .publish(topic, rumqttc::QoS::AtMostOnce, false, json)
+                    .await
+                    .unwrap();
+            });
+        }
         Ok(())
     }
 
@@ -341,4 +393,10 @@ impl SpeechService {
             .send(AudioPlayerCommand::Volume(volume))
             .unwrap();
     }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
+struct AudioMessage {
+    pub data: String,
+    pub format: String,
 }

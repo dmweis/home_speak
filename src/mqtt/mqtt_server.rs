@@ -16,9 +16,8 @@ enum MqttUpdate {
 
 pub fn start_mqtt_service(
     app_config: AppConfig,
-
     speech_service: Arc<Mutex<SpeechService>>,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<AsyncClient> {
     let mut mqttoptions = MqttOptions::new(
         &app_config.mqtt.client_id,
         &app_config.mqtt.broker_host,
@@ -28,6 +27,7 @@ pub fn start_mqtt_service(
     mqttoptions.set_keep_alive(Duration::from_secs(5));
 
     let (client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
+    let client_clone = client.clone();
 
     let base_topic = app_config.mqtt.base_route;
 
@@ -131,5 +131,5 @@ pub fn start_mqtt_service(
         }
     });
 
-    Ok(())
+    Ok(client_clone)
 }

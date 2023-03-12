@@ -1,5 +1,6 @@
 use crate::error::{HomeSpeakError, Result};
 use crate::speech_service::PlayAble;
+use crate::AUDIO_FILE_EXTENSION;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::Path;
@@ -20,7 +21,7 @@ impl AudioCache {
 
     pub(crate) fn get(&self, key: &str) -> Option<Box<dyn PlayAble>> {
         let path = Path::new(&self.cache_dir_path);
-        let file_path = path.join(format!("{}.mp3", key));
+        let file_path = path.join(format!("{}.{}", key, AUDIO_FILE_EXTENSION));
         if let Ok(file) = File::open(file_path) {
             Some(Box::new(file))
         } else {
@@ -30,7 +31,7 @@ impl AudioCache {
 
     pub(crate) fn set(&self, key: &str, contents: Vec<u8>) -> Result<()> {
         let path = Path::new(&self.cache_dir_path);
-        let file_path = path.join(format!("{}.mp3", key));
+        let file_path = path.join(format!("{}.{}", key, AUDIO_FILE_EXTENSION));
         let mut file = File::create(file_path)?;
         file.write_all(&contents)?;
         file.flush()?;

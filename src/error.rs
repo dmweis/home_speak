@@ -1,4 +1,5 @@
 use chrono::format::ParseError;
+use rumqttc::ClientError;
 use thiserror::Error;
 
 pub(crate) type Result<T> = std::result::Result<T, HomeSpeakError>;
@@ -24,4 +25,6 @@ pub enum HomeSpeakError {
     SerializationError(#[from] serde_json::Error),
     #[error("time format parse error")]
     TimeFormatParseError(#[from] ParseError),
+    #[error("mqtt client error")]
+    MqttClientError(#[from] ClientError),
 }

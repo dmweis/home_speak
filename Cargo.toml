@@ -42,6 +42,7 @@ actix-files = {version = "0.6", optional = true}
 actix-web = "4"
 anyhow = "1.0"
 async-trait = "0.1"
+base64 = "0.21.0"
 bytes = "1.1"
 chrono = "0.4.19"
 clap = {version = "3.2", features = ["derive"]}
