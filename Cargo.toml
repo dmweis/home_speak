@@ -1,64 +1,64 @@
 [package]
-name = "home_speak"
-description = "Text to speech node"
-version = "0.1.2"
 authors = ["David Michael Weis <dweis7@gmail.com>"]
+default-run = "home_speak_server"
+description = "Text to speech node"
 edition = "2021"
-publish = false
 license = "MIT OR APACHE"
+name = "home_speak"
+publish = false
 readme = "README.md"
 repository = "https://github.com/dmweis/home_speak"
-default-run = "home_speak_server"
+version = "0.1.2"
 
 [package.metadata.deb]
+assets = [
+  [
+    "target/release/home_speak_server",
+    "/usr/bin/",
+    "755",
+  ],
+  [
+    "configuration/settings.yaml",
+    "/etc/home_speak/settings.yaml",
+    "644",
+  ],
+]
+conf-files = ["/etc/home_speak/settings.yaml"]
 maintainer = "David Weis <dweis7@gmail.com>"
 maintainer-scripts = "debian/"
-conf-files = ["/etc/home_speak/settings.yaml"]
-assets = [
-    [
-        "target/release/home_speak_server",
-        "/usr/bin/",
-        "755",
-    ],
-    [
-        "configuration/settings.yaml",
-        "/etc/home_speak/settings.yaml",
-        "644",
-    ],
-]
 
 [package.metadata.deb.systemd-units]
 
 [dependencies]
-google_tts = { git = "https://github.com/dmweis/google_tts", branch = "main" }
-azure_tts = { git = "https://github.com/dmweis/azure_tts", branch = "main" }
-serde = { version = "1.0", features = ["derive"] }
+azure_tts = {git = "https://github.com/dmweis/azure_tts", branch = "main"}
+google_tts = {git = "https://github.com/dmweis/google_tts", branch = "main"}
+log = "0.4"
+serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 simplelog = "0.11"
-log = "0.4"
 # fix weird bug with mp3 not playing from start
 # rodio = "0.15"
-rodio = { git = "https://github.com/RustAudio/rodio", rev = "55d957f8b40c59fccea4162c4b03f6dd87a7a4d9" }
-clap = { version = "3.2", features = ["derive"] }
-sha2 = "0.10"
-crossbeam-channel = "0.5"
-bytes = "1.1"
-config = "0.11"
-thiserror = "1.0"
-local-ip-address = "0.4.7"
+actix-files = {version = "0.6", optional = true}
 actix-web = "4"
-actix-files = { version = "0.6", optional = true }
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "fs"] }
+anyhow = "1.0"
+async-trait = "0.1"
+bytes = "1.1"
 chrono = "0.4.19"
+clap = {version = "3.2", features = ["derive"]}
+clokwerk = {git = "https://github.com/dmweis/clokwerk", branch = "main"}
+config = "0.13.1"
+crossbeam-channel = "0.5"
+local-ip-address = "0.4.7"
+mqtt-router = {git = "https://github.com/dmweis/mqtt-router", branch = "main"}
 num-traits = "0.2.14"
 ordinal = "0.3.1"
-secrecy = { version = "0.8", features = ["serde"] }
-clokwerk = { git = "https://github.com/dmweis/clokwerk", branch = "main" }
-anyhow = "1.0"
-reqwest = { version = "0.11" }
+reqwest = {version = "0.11"}
+rodio = {git = "https://github.com/RustAudio/rodio", rev = "55d957f8b40c59fccea4162c4b03f6dd87a7a4d9"}
 rumqttc = "0.13.0"
-async-trait = "0.1"
-mqtt-router = { git = "https://github.com/dmweis/mqtt-router", branch = "main" }
+secrecy = {version = "0.8", features = ["serde"]}
+sha2 = "0.10"
+thiserror = "1.0"
+tokio = {version = "1", features = ["macros", "rt-multi-thread", "fs"]}
 
 [features]
 hotreload = ["actix-files"]
