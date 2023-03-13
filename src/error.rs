@@ -27,4 +27,6 @@ pub enum HomeSpeakError {
     TimeFormatParseError(#[from] ParseError),
     #[error("mqtt client error")]
     MqttClientError(#[from] ClientError),
+    #[error("audio channel send error")]
+    AudioChannelSendError,
 }

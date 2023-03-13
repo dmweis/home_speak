@@ -12,7 +12,9 @@ use home_speak::{
 use log::*;
 use simplelog::*;
 use std::{path::PathBuf, sync::Arc};
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc::unbounded_channel, Mutex};
+
+const MQTT_AUDIO_PUB_TOPIC: &str = "transcribed_audio";
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about)]
@@ -28,10 +30,15 @@ async fn main() -> anyhow::Result<()> {
 
     let app_config = get_configuration(opts.config)?;
 
-    let mut speech_service = SpeechService::new(
+    let mqtt_base_topic = app_config.mqtt.base_route.clone();
+
+    let (audio_sender, mut audio_receiver) = unbounded_channel();
+
+    let mut speech_service = SpeechService::new_with_mqtt(
         app_config.tts_service_config.google_api_key.clone(),
         app_config.tts_service_config.azure_api_key.clone(),
         app_config.tts_service_config.cache_dir_path.clone(),
+        Some(audio_sender),
     )?;
 
     let template_engine = TemplateEngine::new(
@@ -60,7 +67,22 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // TODO: I can't pass the client to the speech service since the speech service needs to be passed here....
-    let _client = start_mqtt_service(app_config.clone(), speech_service.clone())?;
+    let client = start_mqtt_service(app_config.clone(), speech_service.clone())?;
+
+    tokio::spawn(async move {
+        // when this crashes it crashes silently.
+        // fixing that would be nice!
+        let message = audio_receiver
+            .recv()
+            .await
+            .expect("Unable to receive from channel");
+        let message = serde_json::to_string_pretty(&message).unwrap();
+        let topic = format!("{mqtt_base_topic}/{MQTT_AUDIO_PUB_TOPIC}");
+        client
+            .publish(topic, rumqttc::QoS::AtMostOnce, false, message)
+            .await
+            .unwrap();
+    });
 
     let template_engine = Arc::new(Mutex::new(template_engine));
 
