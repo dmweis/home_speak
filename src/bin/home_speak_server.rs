@@ -6,13 +6,17 @@ use home_speak::{
     configuration::get_configuration,
     mqtt::start_mqtt_service,
     server::start_server,
-    speech_service::{SpeechService, TtsService},
+    speech_service::{AudioMessage, SpeechService, TtsService},
     template_messages::TemplateEngine,
 };
 use log::*;
+use rumqttc::AsyncClient;
 use simplelog::*;
 use std::{path::PathBuf, sync::Arc};
-use tokio::sync::{mpsc::unbounded_channel, Mutex};
+use tokio::sync::{
+    mpsc::{unbounded_channel, UnboundedReceiver},
+    Mutex,
+};
 
 const MQTT_AUDIO_PUB_TOPIC: &str = "transcribed_audio";
 
@@ -70,18 +74,25 @@ async fn main() -> anyhow::Result<()> {
     let client = start_mqtt_service(app_config.clone(), speech_service.clone())?;
 
     tokio::spawn(async move {
-        // when this crashes it crashes silently.
-        // fixing that would be nice!
-        let message = audio_receiver
-            .recv()
-            .await
-            .expect("Unable to receive from channel");
-        let message = serde_json::to_string_pretty(&message).unwrap();
-        let topic = format!("{mqtt_base_topic}/{MQTT_AUDIO_PUB_TOPIC}");
-        client
-            .publish(topic, rumqttc::QoS::AtMostOnce, false, message)
-            .await
-            .unwrap();
+        async fn helper(
+            audio_receiver: &mut UnboundedReceiver<AudioMessage>,
+            mqtt_base_topic: &str,
+            client: &AsyncClient,
+        ) -> anyhow::Result<()> {
+            if let Some(message) = audio_receiver.recv().await {
+                let message = serde_json::to_string_pretty(&message).unwrap();
+                let topic = format!("{mqtt_base_topic}/{MQTT_AUDIO_PUB_TOPIC}");
+                client
+                    .publish(topic, rumqttc::QoS::AtMostOnce, false, message)
+                    .await?;
+            }
+            Ok(())
+        }
+        loop {
+            if let Err(error) = helper(&mut audio_receiver, &mqtt_base_topic, &client).await {
+                error!("Audio sender failed with {}", error);
+            }
+        }
     });
 
     let template_engine = Arc::new(Mutex::new(template_engine));
