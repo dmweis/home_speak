@@ -91,3 +91,35 @@ impl RouteHandler for SayMoodHandler {
         Ok(())
     }
 }
+
+pub struct SayElevenHandler {
+    speech_service: Arc<Mutex<SpeechService>>,
+}
+
+impl SayElevenHandler {
+    pub fn new(speech_service: Arc<Mutex<SpeechService>>) -> Box<Self> {
+        Box::new(Self { speech_service })
+    }
+}
+
+#[async_trait]
+impl RouteHandler for SayElevenHandler {
+    async fn call(&mut self, _topic: &str, content: &[u8]) -> std::result::Result<(), RouterError> {
+        info!("mqtt say elevent command");
+        let message = from_utf8(content).map_err(|err| RouterError::HandlerError(err.into()))?;
+
+        match self
+            .speech_service
+            .lock()
+            .await
+            .say_eleven_with_default_voice(message)
+            .await
+        {
+            Ok(_) => (),
+            Err(e) => {
+                error!("Failed to call speech service {}", e);
+            }
+        }
+        Ok(())
+    }
+}
