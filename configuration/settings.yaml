@@ -1,6 +1,7 @@
 tts_service_config:
   google_api_key: ""
   azure_api_key: ""
+  eleven_labs_api_key: ""
   cache_dir_path: "/var/cache/home_speak/audio_cache"
   tts_service: "Azure"
 server_config:

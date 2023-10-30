@@ -1,4 +1,5 @@
 tts_service_config:
   google_api_key: "SUPER_SECRET_TOKEN"
   azure_api_key: "SUPER_SECRET_TOKEN_BUT_DIFFERENT"
+  eleven_labs_api_key: "SUPER_SECRET_TOKEN_BUT_EVEN_MORE_DIFFERENT"
 skip_intro: true

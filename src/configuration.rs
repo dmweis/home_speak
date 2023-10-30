@@ -44,6 +44,7 @@ pub struct AppConfig {
 pub struct TtsServiceConfig {
     pub google_api_key: Secret<String>,
     pub azure_api_key: Secret<String>,
+    pub eleven_labs_api_key: Secret<String>,
     pub cache_dir_path: Option<String>,
     pub tts_service: TtsService,
 }

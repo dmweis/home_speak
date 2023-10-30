@@ -26,6 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let speech_service = SpeechService::new(
         app_config.tts_service_config.google_api_key,
         app_config.tts_service_config.azure_api_key,
+        app_config.tts_service_config.eleven_labs_api_key,
         app_config.tts_service_config.cache_dir_path,
     )?;
 

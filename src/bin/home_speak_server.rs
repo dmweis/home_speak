@@ -41,6 +41,7 @@ async fn main() -> anyhow::Result<()> {
     let mut speech_service = SpeechService::new_with_mqtt(
         app_config.tts_service_config.google_api_key.clone(),
         app_config.tts_service_config.azure_api_key.clone(),
+        app_config.tts_service_config.eleven_labs_api_key.clone(),
         app_config.tts_service_config.cache_dir_path.clone(),
         Some(audio_sender),
     )?;

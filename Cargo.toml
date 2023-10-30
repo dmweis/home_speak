@@ -8,7 +8,7 @@ name = "home_speak"
 publish = false
 readme = "README.md"
 repository = "https://github.com/dmweis/home_speak"
-version = "0.1.4"
+version = "0.1.5"
 
 [package.metadata.deb]
 assets = [
@@ -30,8 +30,10 @@ maintainer-scripts = "debian/"
 [package.metadata.deb.systemd-units]
 
 [dependencies]
+# tts
 azure_tts = {git = "https://github.com/dmweis/azure_tts", branch = "main"}
 google_tts = {git = "https://github.com/dmweis/google_tts", branch = "main"}
+
 log = "0.4"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
@@ -43,7 +45,7 @@ actix-web = "4"
 anyhow = "1.0"
 async-trait = "0.1"
 base64 = "0.21.0"
-bytes = "1.1"
+bytes = "1.4"
 chrono = "0.4.19"
 clap = {version = "3.2", features = ["derive"]}
 clokwerk = {git = "https://github.com/dmweis/clokwerk", branch = "main"}
@@ -53,7 +55,8 @@ local-ip-address = "0.4.7"
 mqtt-router = {git = "https://github.com/dmweis/mqtt-router", branch = "main"}
 num-traits = "0.2.14"
 ordinal = "0.3.1"
-reqwest = {version = "0.11"}
+reqwest = {version = "0.11", features = ["json"]}
+
 rodio = {git = "https://github.com/RustAudio/rodio", rev = "55d957f8b40c59fccea4162c4b03f6dd87a7a4d9"}
 rumqttc = "0.13.0"
 secrecy = {version = "0.8", features = ["serde"]}

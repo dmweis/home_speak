@@ -1,6 +1,6 @@
 use crate::audio_cache::AudioCache;
 use crate::error::{HomeSpeakError, Result};
-use crate::AUDIO_FILE_EXTENSION;
+use crate::{eleven_labs_client, AUDIO_FILE_EXTENSION};
 use base64::{engine::general_purpose, Engine as _};
 use log::*;
 use secrecy::{ExposeSecret, Secret};
@@ -56,10 +56,20 @@ fn hash_azure_tts(
     format!("{}-{:x}", voice.name, hashed)
 }
 
+fn hash_eleven_labs_tts(text: &str, voice_id: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(text);
+    hasher.update(voice_id);
+    hasher.update(AZURE_FORMAT_VERSION.to_be_bytes());
+    let hashed = hasher.finalize();
+    format!("{:x}", hashed)
+}
+
 #[derive(Deserialize, Debug, Clone, Copy)]
 pub enum TtsService {
     Azure,
     Google,
+    EleventLabs,
 }
 
 // These are styles that apply to en-US-SaraNeural
@@ -129,12 +139,17 @@ fn create_player() -> Sender<AudioPlayerCommand> {
     sender
 }
 
+/// voice Freya
+const DEFAULT_ELEVEN_LABS_VOICE_ID: &str = "jsCqWAovK2LkecY7zXl4";
+
 pub struct SpeechService {
     google_speech_client: google_tts::GoogleTtsClient,
     azure_speech_client: azure_tts::VoiceService,
+    eleven_labs_client: eleven_labs_client::ElevenLabsTtsClient,
     audio_cache: Option<AudioCache>,
     google_voice: google_tts::VoiceProps,
     azure_voice: azure_tts::VoiceSettings,
+    eleven_labs_default_voice_id: String,
     azure_audio_format: azure_tts::AudioFormat,
     audio_sender: Sender<AudioPlayerCommand>,
     audio_data_broadcaster: Option<TokioSender<AudioMessage>>,
@@ -162,14 +177,22 @@ impl SpeechService {
     pub fn new(
         google_api_key: Secret<String>,
         azure_subscription_key: Secret<String>,
+        eleven_labs_api_key: Secret<String>,
         cache_dir_path: Option<String>,
     ) -> Result<SpeechService> {
-        Self::new_with_mqtt(google_api_key, azure_subscription_key, cache_dir_path, None)
+        Self::new_with_mqtt(
+            google_api_key,
+            azure_subscription_key,
+            eleven_labs_api_key,
+            cache_dir_path,
+            None,
+        )
     }
 
     pub fn new_with_mqtt(
         google_api_key: Secret<String>,
         azure_subscription_key: Secret<String>,
+        eleven_labs_api_key: Secret<String>,
         cache_dir_path: Option<String>,
         audio_data_broadcaster: Option<TokioSender<AudioMessage>>,
     ) -> Result<SpeechService> {
@@ -178,6 +201,10 @@ impl SpeechService {
         let azure_speech_client = azure_tts::VoiceService::new(
             azure_subscription_key.expose_secret(),
             azure_tts::Region::uksouth,
+        );
+
+        let eleven_labs_client = eleven_labs_client::ElevenLabsTtsClient::new(
+            eleven_labs_api_key.expose_secret().to_owned(),
         );
 
         let audio_cache = match cache_dir_path {
@@ -190,9 +217,11 @@ impl SpeechService {
         Ok(SpeechService {
             google_speech_client,
             azure_speech_client,
+            eleven_labs_client,
             audio_cache,
             google_voice: google_tts::VoiceProps::default_english_female_wavenet(),
             azure_voice: azure_tts::EnUsVoices::SaraNeural.to_voice_settings(),
+            eleven_labs_default_voice_id: DEFAULT_ELEVEN_LABS_VOICE_ID.to_owned(),
             azure_audio_format: azure_tts::AudioFormat::Audio48khz192kbitrateMonoMp3,
             audio_sender,
             audio_data_broadcaster,
@@ -347,6 +376,7 @@ impl SpeechService {
         match service {
             TtsService::Azure => self.say_azure(text).await?,
             TtsService::Google => self.say_google(text).await?,
+            TtsService::EleventLabs => self.say_eleven_with_default_voice(text).await?,
         }
         Ok(())
     }
@@ -365,6 +395,35 @@ impl SpeechService {
                     .await?;
             }
         }
+        Ok(())
+    }
+
+    pub async fn say_eleven_with_default_voice(&mut self, text: &str) -> Result<()> {
+        self.say_eleven(text, &self.eleven_labs_default_voice_id.clone())
+            .await?;
+        Ok(())
+    }
+
+    pub async fn say_eleven(&mut self, text: &str, voice_id: &str) -> Result<()> {
+        let sound: Box<dyn PlayAble> = if let Some(ref audio_cache) = self.audio_cache {
+            let file_key = hash_eleven_labs_tts(text, voice_id);
+            if let Some(file) = audio_cache.get(&file_key) {
+                info!("Using cached value with key {}", file_key);
+                file
+            } else {
+                info!("Writing new file with key {}", file_key);
+                let data = self.eleven_labs_client.tts(text, voice_id).await?;
+                let sound: Box<dyn PlayAble> = Box::new(Cursor::new(data.to_vec()));
+                audio_cache.set(&file_key, data.to_vec())?;
+                sound
+            }
+        } else {
+            let data = self.eleven_labs_client.tts(text, voice_id).await?;
+            let sound: Box<dyn PlayAble> = Box::new(Cursor::new(data.to_vec()));
+            sound
+        };
+
+        self.play(sound).await?;
         Ok(())
     }
 

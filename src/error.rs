@@ -29,4 +29,6 @@ pub enum HomeSpeakError {
     MqttClientError(#[from] ClientError),
     #[error("audio channel send error")]
     AudioChannelSendError,
+    #[error("reqwest error")]
+    ReqwestError(#[from] reqwest::Error),
 }
