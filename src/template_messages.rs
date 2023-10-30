@@ -4,8 +4,7 @@ use log::*;
 use num_traits::FromPrimitive;
 use ordinal::Ordinal;
 use std::net::IpAddr;
-use std::process::Command;
-use std::str;
+use std::{fmt::Write, process::Command, str};
 
 use crate::configuration::AssistantConfig;
 
@@ -48,8 +47,10 @@ impl TemplateEngine {
                 let interface_message: String = network_interfaces
                     .iter()
                     .filter(|(_, ip)| ip.is_ipv4() && !ip.is_loopback())
-                    .map(|(name, ip)| format!("{} at {}, ", name, ip))
-                    .collect();
+                    .fold(String::new(), |mut output, (name, ip)| {
+                        let _ = write!(output, "{} at {}, ", name, ip);
+                        output
+                    });
                 info!("local interfaces are: {:?}", interface_message);
                 network_message.push_str(interface_message.trim_end_matches(", "));
                 network_message.push('.');
