@@ -200,33 +200,6 @@ async fn current_time_handler(speech_service: web::Data<Mutex<SpeechService>>) -
     }
 }
 
-#[post("/pause")]
-async fn pause(speech_service: web::Data<Mutex<SpeechService>>) -> impl Responder {
-    speech_service.lock().await.pause();
-    HttpResponse::Ok().finish()
-}
-
-#[post("/resume")]
-async fn resume(speech_service: web::Data<Mutex<SpeechService>>) -> impl Responder {
-    speech_service.lock().await.resume();
-    HttpResponse::Ok().finish()
-}
-
-#[post("/stop")]
-async fn stop(speech_service: web::Data<Mutex<SpeechService>>) -> impl Responder {
-    speech_service.lock().await.stop();
-    HttpResponse::Ok().finish()
-}
-
-#[post("/set_volume/{volume}")]
-async fn set_volume(
-    speech_service: web::Data<Mutex<SpeechService>>,
-    volume: web::Path<f32>,
-) -> impl Responder {
-    speech_service.lock().await.volume(volume.into_inner());
-    HttpResponse::Ok().finish()
-}
-
 #[derive(serde::Deserialize)]
 struct AlarmData {
     message: String,
@@ -342,10 +315,6 @@ pub async fn start_server(
             .service(say_angry_handler)
             .service(say_cheerful_handler)
             .service(say_sad_handler)
-            .service(pause)
-            .service(resume)
-            .service(stop)
-            .service(set_volume)
             .service(create_alarm)
             .service(list_alarms)
             .service(delete_alarm)

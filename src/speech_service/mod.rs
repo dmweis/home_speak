@@ -289,22 +289,6 @@ impl SpeechService {
         self.audio_service.play(sound).await?;
         Ok(())
     }
-
-    pub fn pause(&self) {
-        self.audio_service.pause();
-    }
-
-    pub fn resume(&self) {
-        self.audio_service.resume();
-    }
-
-    pub fn stop(&self) {
-        self.audio_service.stop();
-    }
-
-    pub fn volume(&self, volume: f32) {
-        self.audio_service.volume(volume);
-    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]
