@@ -76,8 +76,10 @@ pub fn create_player() -> Sender<AudioPlayerCommand> {
     let (sender, receiver) = channel();
     thread::spawn(move || loop {
         // This may miss on sender being dead. But if sender is dead we have bigger issues
-        if let Err(e) = audio_player_loop(&receiver) {
-            error!("Audio player loop failed with {}", e);
+        loop {
+            if let Err(e) = audio_player_loop(&receiver) {
+                error!("Audio player loop failed with {}", e);
+            }
         }
     });
     sender

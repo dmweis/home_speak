@@ -1,7 +1,7 @@
 use super::routes::{SayHandler, SayMoodHandler};
 use crate::{
     configuration::AppConfig,
-    mqtt::routes::SayElevenHandler,
+    mqtt::routes::{SayElevenCustomVoiceHandler, SayElevenDefaultHandler},
     speech_service::{AzureVoiceStyle, ElevenSpeechService, SpeechService},
 };
 use log::*;
@@ -105,7 +105,14 @@ pub fn start_mqtt_service(
         router
             .add_handler(
                 &format!("{}/say/eleven/simple", base_topic),
-                SayElevenHandler::new(eleven_speech_service.clone()),
+                SayElevenDefaultHandler::new(eleven_speech_service.clone()),
+            )
+            .unwrap();
+
+        router
+            .add_handler(
+                &format!("{}/say/eleven/voice/+", base_topic),
+                SayElevenCustomVoiceHandler::new(eleven_speech_service.clone()),
             )
             .unwrap();
 

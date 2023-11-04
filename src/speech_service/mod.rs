@@ -36,7 +36,7 @@ fn hash_google_tts(text: &str, voice: &google_tts::VoiceProps) -> String {
 }
 
 // Used to invalidate old cache
-const AZURE_FORMAT_VERSION: u32 = 3;
+const AZURE_FORMAT_VERSION: u32 = 4;
 
 fn hash_azure_tts(
     text: &str,
@@ -303,6 +303,7 @@ impl ElevenSpeechService {
             .get(voice_name)
             .context("Unknown voice")?
             .clone();
+        info!("Using voice id {} for voice {}", voice_id, voice_name);
         self.say_eleven_with_voice_id(text, &voice_id).await?;
         Ok(())
     }

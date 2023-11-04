@@ -1,3 +1,5 @@
+use anyhow::Context;
+use anyhow::Result;
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -111,7 +113,7 @@ impl ElevenLabsTtsClient {
         }
     }
 
-    pub async fn tts(&self, text: &str, voice_id: &str) -> Result<Bytes, reqwest::Error> {
+    pub async fn tts(&self, text: &str, voice_id: &str) -> Result<Bytes> {
         let url = format!("https://api.elevenlabs.io/v1/text-to-speech/{}", voice_id);
 
         let body = TtsRequest {
@@ -134,11 +136,13 @@ impl ElevenLabsTtsClient {
             .json(&body)
             .send()
             .await?;
+        resp.error_for_status_ref()
+            .context("Request failed with status")?;
         let data = resp.bytes().await?;
         Ok(data)
     }
 
-    pub async fn voices(&self) -> Result<Voices, reqwest::Error> {
+    pub async fn voices(&self) -> Result<Voices> {
         let resp = self
             .client
             .get("https://api.elevenlabs.io/v1/voices")
@@ -146,13 +150,14 @@ impl ElevenLabsTtsClient {
             .header("accept", "application/json")
             .send()
             .await?;
-
+        resp.error_for_status_ref()
+            .context("Request failed with status")?;
         let data = resp.json::<Voices>().await?;
 
         Ok(data)
     }
 
-    pub async fn get_subscription_info(&self) -> Result<Subscription, reqwest::Error> {
+    pub async fn get_subscription_info(&self) -> Result<Subscription> {
         let resp = self
             .client
             .get("https://api.elevenlabs.io/v1/user/subscription")
@@ -160,7 +165,8 @@ impl ElevenLabsTtsClient {
             .header("accept", "application/json")
             .send()
             .await?;
-
+        resp.error_for_status_ref()
+            .context("Request failed with status")?;
         let data = resp.json::<Subscription>().await?;
 
         Ok(data)
