@@ -1,20 +1,19 @@
+mod audio_player;
+
 use crate::audio_cache::AudioCache;
 use crate::error::{HomeSpeakError, Result};
 use crate::{eleven_labs_client, AUDIO_FILE_EXTENSION};
+use audio_player::AudioPlayerCommand;
 use base64::{engine::general_purpose, Engine as _};
 use log::*;
 use secrecy::{ExposeSecret, Secret};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::io::Seek;
-use std::sync::mpsc::Receiver;
-use std::{
-    fs::File,
-    io::{Cursor, Read},
-    sync::mpsc::{channel, Sender},
-    thread,
-};
+use std::{io::Cursor, sync::mpsc::Sender};
 use tokio::sync::mpsc::UnboundedSender as TokioSender;
+
+use self::audio_player::create_player;
+pub use self::audio_player::PlayAble;
 
 fn hash_google_tts(text: &str, voice: &google_tts::VoiceProps) -> String {
     let mut hasher = Sha256::new();
@@ -83,62 +82,6 @@ pub enum AzureVoiceStyle {
     Sad,
 }
 
-enum AudioPlayerCommand {
-    Play(Box<dyn PlayAble>),
-    Pause,
-    Resume,
-    Stop,
-    Volume(f32),
-}
-
-fn audio_player_loop(
-    receiver: &Receiver<AudioPlayerCommand>,
-) -> std::result::Result<(), Box<dyn std::error::Error>> {
-    let (_output_stream, output_stream_handle) = rodio::OutputStream::try_default()
-        .map_err(|_| HomeSpeakError::FailedToCreateAnOutputStream)?;
-    let sink = rodio::Sink::try_new(&output_stream_handle)
-        .map_err(|_| HomeSpeakError::FailedToCreateASink)?;
-    loop {
-        let command = receiver.recv()?;
-        match command {
-            AudioPlayerCommand::Play(sound) => {
-                sink.append(
-                    rodio::Decoder::new(sound)
-                        .map_err(|_| HomeSpeakError::FailedToDecodeAudioFile)?,
-                );
-            }
-            AudioPlayerCommand::Pause => {
-                info!("Pausing audio");
-                sink.pause()
-            }
-            AudioPlayerCommand::Resume => {
-                info!("Resuming audio");
-                sink.play()
-            }
-            AudioPlayerCommand::Stop => {
-                info!("Stopping audio");
-                warn!("Ignoring stop because it destroys the sink");
-                // sink.stop()
-            }
-            AudioPlayerCommand::Volume(volume) => {
-                info!("Settings volume to {}", volume);
-                sink.set_volume(volume)
-            }
-        }
-    }
-}
-
-fn create_player() -> Sender<AudioPlayerCommand> {
-    let (sender, receiver) = channel();
-    thread::spawn(move || loop {
-        // This may miss on sender being dead. But if sender is dead we have bigger issues
-        if let Err(e) = audio_player_loop(&receiver) {
-            error!("Audio player loop failed with {}", e);
-        }
-    });
-    sender
-}
-
 /// voice Freya
 const DEFAULT_ELEVEN_LABS_VOICE_ID: &str = "jsCqWAovK2LkecY7zXl4";
 
@@ -153,24 +96,6 @@ pub struct SpeechService {
     azure_audio_format: azure_tts::AudioFormat,
     audio_sender: Sender<AudioPlayerCommand>,
     audio_data_broadcaster: Option<TokioSender<AudioMessage>>,
-}
-
-pub trait PlayAble: std::io::Read + std::io::Seek + Send + Sync {
-    fn as_bytes(&mut self) -> Result<Vec<u8>>;
-}
-
-impl PlayAble for Cursor<Vec<u8>> {
-    fn as_bytes(&mut self) -> Result<Vec<u8>> {
-        Ok(self.get_ref().clone())
-    }
-}
-impl PlayAble for File {
-    fn as_bytes(&mut self) -> Result<Vec<u8>> {
-        let mut buffer = vec![];
-        self.read_to_end(&mut buffer)?;
-        self.seek(std::io::SeekFrom::Start(0))?;
-        Ok(buffer)
-    }
 }
 
 impl SpeechService {
