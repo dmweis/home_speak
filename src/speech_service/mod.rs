@@ -89,7 +89,7 @@ pub struct SpeechService {
     google_speech_client: google_tts::GoogleTtsClient,
     azure_speech_client: azure_tts::VoiceService,
     eleven_labs_client: eleven_labs_client::ElevenLabsTtsClient,
-    audio_cache: Option<AudioCache>,
+    audio_cache: AudioCache,
     google_voice: google_tts::VoiceProps,
     azure_voice: azure_tts::VoiceSettings,
     eleven_labs_default_voice_id: String,
@@ -103,13 +103,13 @@ impl SpeechService {
         google_api_key: Secret<String>,
         azure_subscription_key: Secret<String>,
         eleven_labs_api_key: Secret<String>,
-        cache_dir_path: Option<String>,
+        audio_cache: AudioCache,
     ) -> Result<SpeechService> {
         Self::new_with_mqtt(
             google_api_key,
             azure_subscription_key,
             eleven_labs_api_key,
-            cache_dir_path,
+            audio_cache,
             None,
         )
     }
@@ -118,7 +118,7 @@ impl SpeechService {
         google_api_key: Secret<String>,
         azure_subscription_key: Secret<String>,
         eleven_labs_api_key: Secret<String>,
-        cache_dir_path: Option<String>,
+        audio_cache: AudioCache,
         audio_data_broadcaster: Option<TokioSender<AudioMessage>>,
     ) -> Result<SpeechService> {
         let google_speech_client =
@@ -131,11 +131,6 @@ impl SpeechService {
         let eleven_labs_client = eleven_labs_client::ElevenLabsTtsClient::new(
             eleven_labs_api_key.expose_secret().to_owned(),
         );
-
-        let audio_cache = match cache_dir_path {
-            Some(path) => Some(AudioCache::new(path)?),
-            None => None,
-        };
 
         let audio_sender = create_player();
 
@@ -177,35 +172,12 @@ impl SpeechService {
     }
 
     async fn say_google(&mut self, text: &str) -> Result<()> {
-        let playable: Box<dyn Playable> = if let Some(audio_cache) = &self.audio_cache {
-            let file_key = hash_google_tts(text, &self.google_voice);
-            if let Some(file) = audio_cache.get(&file_key) {
-                info!("Using cached value with key {}", file_key);
-                file
-            } else {
-                info!("Writing new file with key {}", file_key);
-                let data = self
-                    .google_speech_client
-                    .synthesize(
-                        google_tts::TextInput::with_text(text.to_owned()),
-                        self.google_voice.clone(),
-                        google_tts::AudioConfig::default_with_encoding(
-                            google_tts::AudioEncoding::Mp3,
-                        ),
-                    )
-                    .await
-                    .map_err(|_| HomeSpeakError::GoogleTtsError)?;
-                audio_cache.set(
-                    &file_key,
-                    data.as_byte_stream()
-                        .map_err(|_| HomeSpeakError::GoogleTtsError)?,
-                )?;
-                Box::new(Cursor::new(
-                    data.as_byte_stream()
-                        .map_err(|_| HomeSpeakError::GoogleTtsError)?,
-                ))
-            }
+        let file_key = hash_google_tts(text, &self.google_voice);
+        let playable: Box<dyn Playable> = if let Some(file) = self.audio_cache.get(&file_key) {
+            info!("Using cached value with key {}", file_key);
+            file
         } else {
+            info!("Writing new file with key {}", file_key);
             let data = self
                 .google_speech_client
                 .synthesize(
@@ -215,12 +187,17 @@ impl SpeechService {
                 )
                 .await
                 .map_err(|_| HomeSpeakError::GoogleTtsError)?;
-
+            self.audio_cache.set(
+                &file_key,
+                data.as_byte_stream()
+                    .map_err(|_| HomeSpeakError::GoogleTtsError)?,
+            )?;
             Box::new(Cursor::new(
                 data.as_byte_stream()
                     .map_err(|_| HomeSpeakError::GoogleTtsError)?,
             ))
         };
+
         self.play(playable).await?;
         Ok(())
     }
@@ -260,27 +237,20 @@ impl SpeechService {
         };
         segments.push(contents);
 
-        let sound: Box<dyn Playable> = if let Some(ref audio_cache) = self.audio_cache {
-            let file_key = hash_azure_tts(text, voice, self.azure_audio_format, style);
-            if let Some(file) = audio_cache.get(&file_key) {
-                info!("Using cached value with key {}", file_key);
-                file
-            } else {
-                info!("Writing new file with key {}", file_key);
-                let data = self
-                    .azure_speech_client
-                    .synthesize_segments(segments, voice, self.azure_audio_format)
-                    .await?;
-                audio_cache.set(&file_key, data.clone())?;
-                Box::new(Cursor::new(data))
-            }
+        let file_key = hash_azure_tts(text, voice, self.azure_audio_format, style);
+        let sound: Box<dyn Playable> = if let Some(file) = self.audio_cache.get(&file_key) {
+            info!("Using cached value with key {}", file_key);
+            file
         } else {
+            info!("Writing new file with key {}", file_key);
             let data = self
                 .azure_speech_client
                 .synthesize_segments(segments, voice, self.azure_audio_format)
                 .await?;
+            self.audio_cache.set(&file_key, data.clone())?;
             Box::new(Cursor::new(data))
         };
+
         self.play(sound).await?;
         Ok(())
     }
@@ -330,24 +300,17 @@ impl SpeechService {
     }
 
     pub async fn say_eleven(&mut self, text: &str, voice_id: &str) -> Result<()> {
-        let sound: Box<dyn Playable> = if let Some(ref audio_cache) = self.audio_cache {
-            let file_key = hash_eleven_labs_tts(text, voice_id);
-            if let Some(file) = audio_cache.get(&file_key) {
-                info!("Using cached value with key {}", file_key);
-                file
-            } else {
-                info!("Writing new file with key {}", file_key);
-                let data = self.eleven_labs_client.tts(text, voice_id).await?;
-                let sound: Box<dyn Playable> = Box::new(Cursor::new(data.to_vec()));
-                audio_cache.set(&file_key, data.to_vec())?;
-                sound
-            }
+        let file_key = hash_eleven_labs_tts(text, voice_id);
+        let sound: Box<dyn Playable> = if let Some(file) = self.audio_cache.get(&file_key) {
+            info!("Using cached value with key {}", file_key);
+            file
         } else {
+            info!("Writing new file with key {}", file_key);
             let data = self.eleven_labs_client.tts(text, voice_id).await?;
             let sound: Box<dyn Playable> = Box::new(Cursor::new(data.to_vec()));
+            self.audio_cache.set(&file_key, data.to_vec())?;
             sound
         };
-
         self.play(sound).await?;
         Ok(())
     }

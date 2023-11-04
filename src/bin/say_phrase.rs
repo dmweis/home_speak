@@ -1,6 +1,7 @@
 use clap::Parser;
 use crossbeam_channel::{unbounded, Sender};
 use home_speak::{
+    audio_cache,
     configuration::get_configuration,
     speech_service::{SpeechService, TtsService},
 };
@@ -23,11 +24,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app_config = get_configuration(opts.config)?;
 
+    let audio_cache = if let Some(cache_dir_path) = &app_config.tts_service_config.cache_dir_path {
+        audio_cache::AudioCache::new(cache_dir_path.clone())?
+    } else {
+        audio_cache::AudioCache::new_without_cache()
+    };
+
     let speech_service = SpeechService::new(
         app_config.tts_service_config.google_api_key,
         app_config.tts_service_config.azure_api_key,
         app_config.tts_service_config.eleven_labs_api_key,
-        app_config.tts_service_config.cache_dir_path,
+        audio_cache,
     )?;
 
     let speech_service_handle =

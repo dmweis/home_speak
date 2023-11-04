@@ -3,6 +3,7 @@ use actix_files::NamedFile;
 use clap::Parser;
 use home_speak::{
     alarm_service::AlarmService,
+    audio_cache,
     configuration::get_configuration,
     mqtt::start_mqtt_service,
     server::start_server,
@@ -38,11 +39,17 @@ async fn main() -> anyhow::Result<()> {
 
     let (audio_sender, mut audio_receiver) = unbounded_channel();
 
+    let audio_cache = if let Some(cache_dir_path) = &app_config.tts_service_config.cache_dir_path {
+        audio_cache::AudioCache::new(cache_dir_path.clone())?
+    } else {
+        audio_cache::AudioCache::new_without_cache()
+    };
+
     let mut speech_service = SpeechService::new_with_mqtt(
         app_config.tts_service_config.google_api_key.clone(),
         app_config.tts_service_config.azure_api_key.clone(),
         app_config.tts_service_config.eleven_labs_api_key.clone(),
-        app_config.tts_service_config.cache_dir_path.clone(),
+        audio_cache,
         Some(audio_sender),
     )?;
 
