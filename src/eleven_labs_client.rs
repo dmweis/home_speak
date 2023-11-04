@@ -107,8 +107,13 @@ impl ElevenLabsTtsClient {
 
         let body = TtsRequest {
             text: text.to_owned(),
-            model_id: None,
-            voice_settings: None,
+            model_id: Some(String::from("eleven_multilingual_v1")),
+            voice_settings: Some(VoiceSettings {
+                similarity_boost: 0.5,
+                stability: 0.5,
+                style: None,
+                use_speaker_boost: None,
+            }),
         };
 
         let resp = self

@@ -10,7 +10,7 @@ struct Opts {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let opts = Opts::from_args();
+    let opts = Opts::parse();
 
     let eleven_labs_client = eleven_labs_client::ElevenLabsTtsClient::new(opts.key);
     let voices = eleven_labs_client.voices().await?;

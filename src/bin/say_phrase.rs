@@ -19,7 +19,7 @@ struct Opts {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logging();
-    let opts = Opts::from_args();
+    let opts = Opts::parse();
 
     let app_config = get_configuration(opts.config)?;
 

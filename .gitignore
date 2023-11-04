@@ -10,3 +10,5 @@ dev_settings.yaml
 
 # saved_alarms
 saved_alarms.json
+
+docker_out/
