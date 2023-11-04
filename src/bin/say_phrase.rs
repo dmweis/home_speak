@@ -3,7 +3,7 @@ use crossbeam_channel::{unbounded, Sender};
 use home_speak::{
     audio_cache,
     configuration::get_configuration,
-    speech_service::{SpeechService, TtsService},
+    speech_service::{AudioService, SpeechService, TtsService},
 };
 use log::*;
 use simplelog::*;
@@ -30,11 +30,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         audio_cache::AudioCache::new_without_cache()
     };
 
+    let audio_service = AudioService::new(None)?;
+
     let speech_service = SpeechService::new(
         app_config.tts_service_config.google_api_key,
         app_config.tts_service_config.azure_api_key,
-        app_config.tts_service_config.eleven_labs_api_key,
         audio_cache,
+        audio_service,
     )?;
 
     let speech_service_handle =

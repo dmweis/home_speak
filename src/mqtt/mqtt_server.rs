@@ -2,7 +2,7 @@ use super::routes::{SayHandler, SayMoodHandler};
 use crate::{
     configuration::AppConfig,
     mqtt::routes::SayElevenHandler,
-    speech_service::{AzureVoiceStyle, SpeechService},
+    speech_service::{AzureVoiceStyle, ElevenSpeechService, SpeechService},
 };
 use log::*;
 use mqtt_router::Router;
@@ -15,9 +15,12 @@ enum MqttUpdate {
     Reconnection(ConnAck),
 }
 
+const MQTT_MAX_PACKET_SIZE: usize = 268435455;
+
 pub fn start_mqtt_service(
     app_config: AppConfig,
     speech_service: Arc<Mutex<SpeechService>>,
+    eleven_speech_service: ElevenSpeechService,
 ) -> anyhow::Result<AsyncClient> {
     let mut mqttoptions = MqttOptions::new(
         &app_config.mqtt.client_id,
@@ -26,6 +29,7 @@ pub fn start_mqtt_service(
     );
     info!("Starting MQTT server with options {:?}", mqttoptions);
     mqttoptions.set_keep_alive(Duration::from_secs(5));
+    mqttoptions.set_max_packet_size(MQTT_MAX_PACKET_SIZE, MQTT_MAX_PACKET_SIZE);
 
     let (client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
     let client_clone = client.clone();
@@ -101,7 +105,7 @@ pub fn start_mqtt_service(
         router
             .add_handler(
                 &format!("{}/say/eleven/simple", base_topic),
-                SayElevenHandler::new(speech_service.clone()),
+                SayElevenHandler::new(eleven_speech_service.clone()),
             )
             .unwrap();
 

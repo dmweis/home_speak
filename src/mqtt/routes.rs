@@ -1,5 +1,5 @@
 use crate::{
-    speech_service::{AzureVoiceStyle, SpeechService},
+    speech_service::{AzureVoiceStyle, ElevenSpeechService, SpeechService},
     template_messages::TemplateEngine,
 };
 use async_trait::async_trait;
@@ -93,11 +93,11 @@ impl RouteHandler for SayMoodHandler {
 }
 
 pub struct SayElevenHandler {
-    speech_service: Arc<Mutex<SpeechService>>,
+    speech_service: ElevenSpeechService,
 }
 
 impl SayElevenHandler {
-    pub fn new(speech_service: Arc<Mutex<SpeechService>>) -> Box<Self> {
+    pub fn new(speech_service: ElevenSpeechService) -> Box<Self> {
         Box::new(Self { speech_service })
     }
 }
@@ -110,8 +110,6 @@ impl RouteHandler for SayElevenHandler {
 
         match self
             .speech_service
-            .lock()
-            .await
             .say_eleven_with_default_voice(message)
             .await
         {

@@ -37,12 +37,12 @@ impl Voices {
         self.voices.iter().find(|v| v.name == *name).cloned()
     }
 
-    pub fn name_to_id_table(&self) -> Option<HashMap<String, String>> {
+    pub fn name_to_id_table(&self) -> HashMap<String, String> {
         let mut table = HashMap::new();
         for voice in &self.voices {
             table.insert(voice.name.clone(), voice.voice_id.clone());
         }
-        Some(table)
+        table
     }
 }
 
@@ -97,6 +97,7 @@ pub struct Invoice {
     next_payment_attempt_unix: i64,
 }
 
+#[derive(Debug, Clone)]
 pub struct ElevenLabsTtsClient {
     client: reqwest::Client,
     api_key: String,

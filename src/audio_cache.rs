@@ -5,6 +5,7 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::Path;
 
+#[derive(Debug, Clone)]
 pub struct AudioCache {
     cache_dir_path: Option<String>,
 }

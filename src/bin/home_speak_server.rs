@@ -7,7 +7,7 @@ use home_speak::{
     configuration::get_configuration,
     mqtt::start_mqtt_service,
     server::start_server,
-    speech_service::{AudioMessage, SpeechService, TtsService},
+    speech_service::{AudioMessage, AudioService, ElevenSpeechService, SpeechService, TtsService},
     template_messages::TemplateEngine,
 };
 use log::*;
@@ -45,13 +45,21 @@ async fn main() -> anyhow::Result<()> {
         audio_cache::AudioCache::new_without_cache()
     };
 
+    let audio_service = AudioService::new(Some(audio_sender))?;
+
     let mut speech_service = SpeechService::new_with_mqtt(
         app_config.tts_service_config.google_api_key.clone(),
         app_config.tts_service_config.azure_api_key.clone(),
+        audio_cache.clone(),
+        audio_service.clone(),
+    )?;
+
+    let eleven_speech_service = ElevenSpeechService::new(
         app_config.tts_service_config.eleven_labs_api_key.clone(),
         audio_cache,
-        Some(audio_sender),
-    )?;
+        audio_service,
+    )
+    .await?;
 
     let template_engine = TemplateEngine::new(
         app_config.assistant_config.clone(),
@@ -79,7 +87,11 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // TODO: I can't pass the client to the speech service since the speech service needs to be passed here....
-    let client = start_mqtt_service(app_config.clone(), speech_service.clone())?;
+    let client = start_mqtt_service(
+        app_config.clone(),
+        speech_service.clone(),
+        eleven_speech_service,
+    )?;
 
     tokio::spawn(async move {
         async fn helper(
