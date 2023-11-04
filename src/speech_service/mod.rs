@@ -94,8 +94,7 @@ pub struct SpeechService {
     azure_voice: azure_tts::VoiceSettings,
     eleven_labs_default_voice_id: String,
     azure_audio_format: azure_tts::AudioFormat,
-    audio_sender: Sender<AudioPlayerCommand>,
-    audio_data_broadcaster: Option<TokioSender<AudioMessage>>,
+    audio_service: AudioService,
 }
 
 impl SpeechService {
@@ -132,7 +131,7 @@ impl SpeechService {
             eleven_labs_api_key.expose_secret().to_owned(),
         );
 
-        let audio_sender = create_player();
+        let audio_service = AudioService::new(audio_data_broadcaster)?;
 
         Ok(SpeechService {
             google_speech_client,
@@ -143,32 +142,8 @@ impl SpeechService {
             azure_voice: azure_tts::EnUsVoices::SaraNeural.to_voice_settings(),
             eleven_labs_default_voice_id: DEFAULT_ELEVEN_LABS_VOICE_ID.to_owned(),
             azure_audio_format: azure_tts::AudioFormat::Audio48khz192kbitrateMonoMp3,
-            audio_sender,
-            audio_data_broadcaster,
+            audio_service,
         })
-    }
-
-    async fn play(&mut self, mut data: Box<dyn Playable>) -> Result<()> {
-        self.publish_audio_file(&mut data)?;
-        self.audio_sender
-            .send(AudioPlayerCommand::Play(data))
-            .unwrap();
-        Ok(())
-    }
-
-    fn publish_audio_file(&self, data: &mut Box<dyn Playable>) -> Result<()> {
-        if let Some(sender) = self.audio_data_broadcaster.as_ref().cloned() {
-            let payload = data.as_bytes()?;
-            let base64_wav_file: String = general_purpose::STANDARD.encode(payload);
-            let message = AudioMessage {
-                data: base64_wav_file,
-                format: AUDIO_FILE_EXTENSION.to_owned(),
-            };
-            sender
-                .send(message)
-                .map_err(|_| HomeSpeakError::AudioChannelSendError)?;
-        }
-        Ok(())
     }
 
     async fn say_google(&mut self, text: &str) -> Result<()> {
@@ -198,7 +173,7 @@ impl SpeechService {
             ))
         };
 
-        self.play(playable).await?;
+        self.audio_service.play(playable).await?;
         Ok(())
     }
 
@@ -251,7 +226,7 @@ impl SpeechService {
             Box::new(Cursor::new(data))
         };
 
-        self.play(sound).await?;
+        self.audio_service.play(sound).await?;
         Ok(())
     }
 
@@ -311,7 +286,69 @@ impl SpeechService {
             self.audio_cache.set(&file_key, data.to_vec())?;
             sound
         };
-        self.play(sound).await?;
+        self.audio_service.play(sound).await?;
+        Ok(())
+    }
+
+    pub fn pause(&self) {
+        self.audio_service.pause();
+    }
+
+    pub fn resume(&self) {
+        self.audio_service.resume();
+    }
+
+    pub fn stop(&self) {
+        self.audio_service.stop();
+    }
+
+    pub fn volume(&self, volume: f32) {
+        self.audio_service.volume(volume);
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
+pub struct AudioMessage {
+    pub data: String,
+    pub format: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct AudioService {
+    audio_sender: Sender<AudioPlayerCommand>,
+    audio_data_broadcaster: Option<TokioSender<AudioMessage>>,
+}
+
+impl AudioService {
+    pub fn new(audio_data_broadcaster: Option<TokioSender<AudioMessage>>) -> Result<Self> {
+        let audio_sender = create_player();
+
+        Ok(AudioService {
+            audio_sender,
+            audio_data_broadcaster,
+        })
+    }
+
+    async fn play(&mut self, mut data: Box<dyn Playable>) -> Result<()> {
+        self.publish_audio_file(&mut data)?;
+        self.audio_sender
+            .send(AudioPlayerCommand::Play(data))
+            .unwrap();
+        Ok(())
+    }
+
+    fn publish_audio_file(&self, data: &mut Box<dyn Playable>) -> Result<()> {
+        if let Some(sender) = self.audio_data_broadcaster.as_ref().cloned() {
+            let payload = data.as_bytes()?;
+            let base64_wav_file: String = general_purpose::STANDARD.encode(payload);
+            let message = AudioMessage {
+                data: base64_wav_file,
+                format: AUDIO_FILE_EXTENSION.to_owned(),
+            };
+            sender
+                .send(message)
+                .map_err(|_| HomeSpeakError::AudioChannelSendError)?;
+        }
         Ok(())
     }
 
@@ -332,10 +369,4 @@ impl SpeechService {
             .send(AudioPlayerCommand::Volume(volume))
             .unwrap();
     }
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone, Default)]
-pub struct AudioMessage {
-    pub data: String,
-    pub format: String,
 }
