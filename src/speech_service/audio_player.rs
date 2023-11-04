@@ -9,16 +9,16 @@ use std::{
     thread,
 };
 
-pub trait PlayAble: std::io::Read + std::io::Seek + Send + Sync {
+pub trait Playable: std::io::Read + std::io::Seek + Send + Sync {
     fn as_bytes(&mut self) -> Result<Vec<u8>>;
 }
 
-impl PlayAble for Cursor<Vec<u8>> {
+impl Playable for Cursor<Vec<u8>> {
     fn as_bytes(&mut self) -> Result<Vec<u8>> {
         Ok(self.get_ref().clone())
     }
 }
-impl PlayAble for File {
+impl Playable for File {
     fn as_bytes(&mut self) -> Result<Vec<u8>> {
         let mut buffer = vec![];
         self.read_to_end(&mut buffer)?;
@@ -28,7 +28,7 @@ impl PlayAble for File {
 }
 
 pub enum AudioPlayerCommand {
-    Play(Box<dyn PlayAble>),
+    Play(Box<dyn Playable>),
     Pause,
     Resume,
     Stop,

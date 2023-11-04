@@ -1,5 +1,5 @@
 use crate::error::{HomeSpeakError, Result};
-use crate::speech_service::PlayAble;
+use crate::speech_service::Playable;
 use crate::AUDIO_FILE_EXTENSION;
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -19,7 +19,7 @@ impl AudioCache {
         Ok(AudioCache { cache_dir_path })
     }
 
-    pub(crate) fn get(&self, key: &str) -> Option<Box<dyn PlayAble>> {
+    pub(crate) fn get(&self, key: &str) -> Option<Box<dyn Playable>> {
         let path = Path::new(&self.cache_dir_path);
         let file_path = path.join(format!("{}.{}", key, AUDIO_FILE_EXTENSION));
         if let Ok(file) = File::open(file_path) {

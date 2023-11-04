@@ -13,7 +13,7 @@ use std::{io::Cursor, sync::mpsc::Sender};
 use tokio::sync::mpsc::UnboundedSender as TokioSender;
 
 use self::audio_player::create_player;
-pub use self::audio_player::PlayAble;
+pub use self::audio_player::Playable;
 
 fn hash_google_tts(text: &str, voice: &google_tts::VoiceProps) -> String {
     let mut hasher = Sha256::new();
@@ -153,7 +153,7 @@ impl SpeechService {
         })
     }
 
-    async fn play(&mut self, mut data: Box<dyn PlayAble>) -> Result<()> {
+    async fn play(&mut self, mut data: Box<dyn Playable>) -> Result<()> {
         self.publish_audio_file(&mut data)?;
         self.audio_sender
             .send(AudioPlayerCommand::Play(data))
@@ -161,7 +161,7 @@ impl SpeechService {
         Ok(())
     }
 
-    fn publish_audio_file(&self, data: &mut Box<dyn PlayAble>) -> Result<()> {
+    fn publish_audio_file(&self, data: &mut Box<dyn Playable>) -> Result<()> {
         if let Some(sender) = self.audio_data_broadcaster.as_ref().cloned() {
             let payload = data.as_bytes()?;
             let base64_wav_file: String = general_purpose::STANDARD.encode(payload);
@@ -177,7 +177,7 @@ impl SpeechService {
     }
 
     async fn say_google(&mut self, text: &str) -> Result<()> {
-        let playable: Box<dyn PlayAble> = if let Some(audio_cache) = &self.audio_cache {
+        let playable: Box<dyn Playable> = if let Some(audio_cache) = &self.audio_cache {
             let file_key = hash_google_tts(text, &self.google_voice);
             if let Some(file) = audio_cache.get(&file_key) {
                 info!("Using cached value with key {}", file_key);
@@ -260,7 +260,7 @@ impl SpeechService {
         };
         segments.push(contents);
 
-        let sound: Box<dyn PlayAble> = if let Some(ref audio_cache) = self.audio_cache {
+        let sound: Box<dyn Playable> = if let Some(ref audio_cache) = self.audio_cache {
             let file_key = hash_azure_tts(text, voice, self.azure_audio_format, style);
             if let Some(file) = audio_cache.get(&file_key) {
                 info!("Using cached value with key {}", file_key);
@@ -330,7 +330,7 @@ impl SpeechService {
     }
 
     pub async fn say_eleven(&mut self, text: &str, voice_id: &str) -> Result<()> {
-        let sound: Box<dyn PlayAble> = if let Some(ref audio_cache) = self.audio_cache {
+        let sound: Box<dyn Playable> = if let Some(ref audio_cache) = self.audio_cache {
             let file_key = hash_eleven_labs_tts(text, voice_id);
             if let Some(file) = audio_cache.get(&file_key) {
                 info!("Using cached value with key {}", file_key);
@@ -338,13 +338,13 @@ impl SpeechService {
             } else {
                 info!("Writing new file with key {}", file_key);
                 let data = self.eleven_labs_client.tts(text, voice_id).await?;
-                let sound: Box<dyn PlayAble> = Box::new(Cursor::new(data.to_vec()));
+                let sound: Box<dyn Playable> = Box::new(Cursor::new(data.to_vec()));
                 audio_cache.set(&file_key, data.to_vec())?;
                 sound
             }
         } else {
             let data = self.eleven_labs_client.tts(text, voice_id).await?;
-            let sound: Box<dyn PlayAble> = Box::new(Cursor::new(data.to_vec()));
+            let sound: Box<dyn Playable> = Box::new(Cursor::new(data.to_vec()));
             sound
         };
 
