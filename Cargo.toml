@@ -37,32 +37,28 @@ google_tts = {git = "https://github.com/dmweis/google_tts", branch = "main"}
 log = "0.4"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
-simplelog = "0.11"
-# fix weird bug with mp3 not playing from start
-# rodio = "0.15"
-actix-files = {version = "0.6", optional = true}
-actix-web = "4"
+simplelog = "0.12"
+
 anyhow = "1.0"
 async-trait = "0.1"
 base64 = "0.21.0"
 bytes = "1.4"
 chrono = "0.4.19"
-clap = {version = "3.2", features = ["derive"]}
-clokwerk = {git = "https://github.com/dmweis/clokwerk", branch = "main"}
+clap = {version = "4.4", features = ["derive"]}
 config = "0.13.1"
 crossbeam-channel = "0.5"
-local-ip-address = "0.4.7"
+local-ip-address = "0.5"
 mqtt-router = {git = "https://github.com/dmweis/mqtt-router", branch = "main"}
 num-traits = "0.2.14"
 ordinal = "0.3.1"
 reqwest = {version = "0.11", features = ["json"]}
 
+# fix weird bug with mp3 not playing from start
+# rodio = "0.15"
 rodio = {git = "https://github.com/RustAudio/rodio", rev = "55d957f8b40c59fccea4162c4b03f6dd87a7a4d9"}
-rumqttc = "0.13.0"
+rumqttc = "0.23.0"
 secrecy = {version = "0.8", features = ["serde"]}
 sha2 = "0.10"
 thiserror = "1.0"
 tokio = {version = "1", features = ["macros", "rt-multi-thread", "fs"]}
 
-[features]
-hotreload = ["actix-files"]

@@ -2,10 +2,8 @@
 use actix_files::NamedFile;
 use clap::Parser;
 use home_speak::{
-    alarm_service::AlarmService,
     configuration::get_configuration,
     mqtt::start_mqtt_service,
-    server::start_server,
     speech_service::{AudioMessage, SpeechService, TtsService},
     template_messages::TemplateEngine,
 };
@@ -13,10 +11,7 @@ use log::*;
 use rumqttc::AsyncClient;
 use simplelog::*;
 use std::{path::PathBuf, sync::Arc};
-use tokio::sync::{
-    mpsc::{unbounded_channel, UnboundedReceiver},
-    Mutex,
-};
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 
 const MQTT_AUDIO_PUB_TOPIC: &str = "transcribed_audio";
 
@@ -30,7 +25,7 @@ struct Opts {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     setup_logging();
-    let opts = Opts::from_args();
+    let opts = Opts::parse();
 
     let app_config = get_configuration(opts.config)?;
 
@@ -60,17 +55,6 @@ async fn main() -> anyhow::Result<()> {
 
     let speech_service = Arc::new(tokio::sync::Mutex::new(speech_service));
 
-    let alarm_service = Arc::new(tokio::sync::Mutex::new(AlarmService::new(
-        speech_service.clone(),
-    )));
-
-    if let Some(ref path) = app_config.alarm_config.save_file_path {
-        if let Err(e) = alarm_service.lock().await.add_alarms_from_file(path).await {
-            error!("Failed to read saved alarms from {} with error {}", path, e);
-            return Err(anyhow::anyhow!("Failed to read saved alarms {}", e));
-        }
-    }
-
     // TODO: I can't pass the client to the speech service since the speech service needs to be passed here....
     let client = start_mqtt_service(app_config.clone(), speech_service.clone())?;
 
@@ -95,10 +79,6 @@ async fn main() -> anyhow::Result<()> {
             }
         }
     });
-
-    let template_engine = Arc::new(Mutex::new(template_engine));
-
-    start_server(app_config, speech_service, alarm_service, template_engine).await?;
 
     Ok(())
 }
