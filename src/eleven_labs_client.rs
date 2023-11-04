@@ -36,6 +36,14 @@ impl Voices {
     pub fn by_name(&self, name: &str) -> Option<Voice> {
         self.voices.iter().find(|v| v.name == *name).cloned()
     }
+
+    pub fn name_to_id_table(&self) -> Option<HashMap<String, String>> {
+        let mut table = HashMap::new();
+        for voice in &self.voices {
+            table.insert(voice.name.clone(), voice.voice_id.clone());
+        }
+        Some(table)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
