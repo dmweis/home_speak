@@ -191,12 +191,6 @@
         <button @click="say" :disabled="!messageReady">
             Test phrase
         </button>
-        <button @click="open_blinds">
-            open blinds
-        </button>
-        <button @click="close_blinds">
-            close blinds
-        </button>
         <br>
         <button @click="fetch_alarms">
             fetch alarms
@@ -288,16 +282,6 @@
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                    });
-                },
-                async open_blinds() {
-                    await fetch("/open_blinds", {
-                        method: "POST",
-                    });
-                },
-                async close_blinds() {
-                    await fetch("/close_blinds", {
-                        method: "POST",
                     });
                 }
             },

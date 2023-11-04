@@ -1,6 +1,5 @@
 use crate::{
     alarm_service::{Alarm, AlarmId, AlarmService},
-    blinds::BlindsController,
     configuration::{AlarmConfig, AppConfig},
     speech_service::{AzureVoiceStyle, SpeechService, TtsService},
     template_messages::{get_human_current_time, TemplateEngine},
@@ -270,22 +269,6 @@ async fn create_alarm(
     HttpResponse::Ok().finish()
 }
 
-#[post("open_blinds")]
-async fn open_blinds(blinds: web::Data<BlindsController>) -> impl Responder {
-    match blinds.open_blinds().await {
-        Ok(()) => HttpResponse::Ok().finish(),
-        Err(_) => HttpResponse::InternalServerError().finish(),
-    }
-}
-
-#[post("close_blinds")]
-async fn close_blinds(blinds: web::Data<BlindsController>) -> impl Responder {
-    match blinds.close_blinds().await {
-        Ok(()) => HttpResponse::Ok().finish(),
-        Err(_) => HttpResponse::InternalServerError().finish(),
-    }
-}
-
 #[derive(serde::Serialize)]
 struct AlarmList {
     alarms: Vec<Alarm>,
@@ -348,7 +331,6 @@ pub async fn start_server(
     let speech_service = web::Data::from(speech_service);
     let template_engine = web::Data::from(template_engine);
     let alarm_service = web::Data::from(alarm_service);
-    let blinds = web::Data::new(BlindsController::new(app_config.blinds.url.clone()));
 
     HttpServer::new(move || {
         App::new()
@@ -368,13 +350,10 @@ pub async fn start_server(
             .service(list_alarms)
             .service(delete_alarm)
             .service(index)
-            .service(open_blinds)
-            .service(close_blinds)
             .app_data(speech_service.clone())
             .app_data(template_engine.clone())
             .app_data(alarm_service.clone())
             .app_data(alarm_config.clone())
-            .app_data(blinds.clone())
     })
     .bind(address)?
     .run()

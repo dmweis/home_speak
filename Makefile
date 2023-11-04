@@ -36,7 +36,6 @@ build-docker:
 	mkdir docker_out
 	DOCKER_BUILDKIT=1 docker build --tag hopper-builder --file Dockerfile --output type=local,dest=docker_out .
 
-
 .PHONY: push-docker-built
 push-docker-built: build-docker
 	rsync -avz --delete docker_out/* $(TARGET_HOST):/home/$(TARGET_USERNAME)/home-speak

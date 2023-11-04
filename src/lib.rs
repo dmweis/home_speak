@@ -1,6 +1,5 @@
 pub mod alarm_service;
 pub mod audio_cache;
-pub mod blinds;
 pub mod configuration;
 pub mod eleven_labs_client;
 pub mod error;
