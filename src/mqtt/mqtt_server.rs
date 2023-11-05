@@ -1,8 +1,8 @@
 use super::routes::{SayHandler, SayMoodHandler};
 use crate::{
     configuration::AppConfig,
-    mqtt::routes::{SayElevenCustomVoiceHandler, SayElevenDefaultHandler},
-    speech_service::{AzureVoiceStyle, ElevenSpeechService, SpeechService},
+    mqtt::routes::{Mp3AudioPlayerHandler, SayElevenCustomVoiceHandler, SayElevenDefaultHandler},
+    speech_service::{AudioService, AzureVoiceStyle, ElevenSpeechService, SpeechService},
 };
 use log::*;
 use mqtt_router::Router;
@@ -21,6 +21,7 @@ pub fn start_mqtt_service(
     app_config: AppConfig,
     speech_service: Arc<Mutex<SpeechService>>,
     eleven_speech_service: ElevenSpeechService,
+    audio_service: AudioService,
 ) -> anyhow::Result<AsyncClient> {
     let mut mqttoptions = MqttOptions::new(
         &app_config.mqtt.client_id,
@@ -113,6 +114,13 @@ pub fn start_mqtt_service(
             .add_handler(
                 &format!("{}/say/eleven/voice/+", base_topic),
                 SayElevenCustomVoiceHandler::new(eleven_speech_service.clone()),
+            )
+            .unwrap();
+
+        router
+            .add_handler(
+                &format!("{}/play", base_topic),
+                Mp3AudioPlayerHandler::new(audio_service.clone()),
             )
             .unwrap();
 

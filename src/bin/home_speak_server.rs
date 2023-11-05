@@ -57,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
     let eleven_speech_service = ElevenSpeechService::new(
         app_config.tts_service_config.eleven_labs_api_key.clone(),
         audio_cache,
-        audio_service,
+        audio_service.clone(),
     )
     .await?;
 
@@ -91,6 +91,7 @@ async fn main() -> anyhow::Result<()> {
         app_config.clone(),
         speech_service.clone(),
         eleven_speech_service,
+        audio_service,
     )?;
 
     tokio::spawn(async move {

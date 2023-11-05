@@ -160,7 +160,7 @@ impl SpeechService {
             ))
         };
 
-        self.audio_service.play(playable).await?;
+        self.audio_service.play(playable)?;
         Ok(())
     }
 
@@ -213,7 +213,7 @@ impl SpeechService {
             Box::new(Cursor::new(data))
         };
 
-        self.audio_service.play(sound).await?;
+        self.audio_service.play(sound)?;
         Ok(())
     }
 
@@ -320,7 +320,7 @@ impl ElevenSpeechService {
             self.audio_cache.set(&file_key, data.to_vec())?;
             sound
         };
-        self.audio_service.play(sound).await?;
+        self.audio_service.play(sound)?;
         Ok(())
     }
 }
@@ -347,7 +347,7 @@ impl AudioService {
         })
     }
 
-    async fn play(&self, mut data: Box<dyn Playable>) -> Result<()> {
+    pub fn play(&self, mut data: Box<dyn Playable>) -> Result<()> {
         self.publish_audio_file(&mut data)?;
         self.audio_sender
             .send(AudioPlayerCommand::Play(data))

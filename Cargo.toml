@@ -8,7 +8,7 @@ name = "home_speak"
 publish = false
 readme = "README.md"
 repository = "https://github.com/dmweis/home_speak"
-version = "0.2.5"
+version = "0.2.6"
 
 [package.metadata.deb]
 assets = [

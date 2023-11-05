@@ -1,5 +1,5 @@
 use crate::{
-    speech_service::{AzureVoiceStyle, ElevenSpeechService, SpeechService},
+    speech_service::{AudioService, AzureVoiceStyle, ElevenSpeechService, SpeechService},
     template_messages::TemplateEngine,
 };
 use anyhow::Context;
@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use log::*;
 use mqtt_router::{RouteHandler, RouterError};
 use serde::Deserialize;
-use std::{str::from_utf8, sync::Arc};
+use std::{io::Cursor, str::from_utf8, sync::Arc};
 use tokio::sync::Mutex;
 
 pub struct SayHandler {
@@ -86,7 +86,7 @@ impl RouteHandler for SayMoodHandler {
         {
             Ok(_) => (),
             Err(e) => {
-                error!("Failed to call speech service {}", e);
+                error!("Failed to call speech service {:?}", e);
             }
         }
         Ok(())
@@ -116,7 +116,7 @@ impl RouteHandler for SayElevenDefaultHandler {
         {
             Ok(_) => (),
             Err(e) => {
-                error!("Failed to call speech service {}", e);
+                error!("Failed to call speech service {:?}", e);
             }
         }
         Ok(())
@@ -149,7 +149,33 @@ impl RouteHandler for SayElevenCustomVoiceHandler {
         match self.speech_service.say_eleven(message, voice_name).await {
             Ok(_) => (),
             Err(e) => {
-                error!("Failed to call speech service {}", e);
+                error!("Failed to call speech service {:?}", e);
+            }
+        }
+        Ok(())
+    }
+}
+
+pub struct Mp3AudioPlayerHandler {
+    audio_service: AudioService,
+}
+
+impl Mp3AudioPlayerHandler {
+    pub fn new(audio_service: AudioService) -> Box<Self> {
+        Box::new(Self { audio_service })
+    }
+}
+
+#[async_trait]
+impl RouteHandler for Mp3AudioPlayerHandler {
+    async fn call(&mut self, _topic: &str, content: &[u8]) -> std::result::Result<(), RouterError> {
+        info!("mqtt mp3 audio player");
+
+        let audio = Box::new(Cursor::new(content.to_vec()));
+        match self.audio_service.play(audio) {
+            Ok(_) => (),
+            Err(e) => {
+                error!("Failed to call audio service {:?}", e);
             }
         }
         Ok(())
