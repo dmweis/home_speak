@@ -1,7 +1,10 @@
 use super::routes::{SayHandler, SayMoodHandler};
 use crate::{
     configuration::AppConfig,
-    mqtt::routes::{Mp3AudioPlayerHandler, SayElevenCustomVoiceHandler, SayElevenDefaultHandler},
+    mqtt::routes::{
+        Mp3AudioPlayerHandler, RestartRequestHandler, SayElevenCustomVoiceHandler,
+        SayElevenDefaultHandler,
+    },
     speech_service::{AudioService, AzureVoiceStyle, ElevenSpeechService, SpeechService},
 };
 use log::*;
@@ -121,6 +124,13 @@ pub fn start_mqtt_service(
             .add_handler(
                 &format!("{}/play", base_topic),
                 Mp3AudioPlayerHandler::new(audio_service.clone()),
+            )
+            .unwrap();
+
+        router
+            .add_handler(
+                &format!("{}/restart", base_topic),
+                RestartRequestHandler::new(audio_service.clone()),
             )
             .unwrap();
 

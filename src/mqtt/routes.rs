@@ -181,3 +181,32 @@ impl RouteHandler for Mp3AudioPlayerHandler {
         Ok(())
     }
 }
+
+pub struct RestartRequestHandler {
+    audio_service: AudioService,
+}
+
+impl RestartRequestHandler {
+    pub fn new(audio_service: AudioService) -> Box<Self> {
+        Box::new(Self { audio_service })
+    }
+}
+
+#[async_trait]
+impl RouteHandler for RestartRequestHandler {
+    async fn call(
+        &mut self,
+        _topic: &str,
+        _content: &[u8],
+    ) -> std::result::Result<(), RouterError> {
+        info!("mqtt mp3 audio player");
+
+        match self.audio_service.restart_player() {
+            Ok(_) => (),
+            Err(e) => {
+                error!("Failed to call audio service {:?}", e);
+            }
+        }
+        Ok(())
+    }
+}

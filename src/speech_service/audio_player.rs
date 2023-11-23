@@ -34,6 +34,7 @@ pub enum AudioPlayerCommand {
     Resume,
     Stop,
     Volume(f32),
+    Restart,
 }
 
 /// Select the first audio output device that contains "CARD=Device" in its name
@@ -67,7 +68,7 @@ fn select_output_device() -> anyhow::Result<(rodio::OutputStream, rodio::OutputS
     anyhow::bail!("No audio output device found");
 }
 
-fn audio_player_loop(receiver: &Receiver<AudioPlayerCommand>) -> anyhow::Result<()> {
+fn audio_player_loop(receiver: &Receiver<AudioPlayerCommand>) -> anyhow::Result<bool> {
     // let (_output_stream, output_stream_handle) = rodio::OutputStream::try_default()
     //     .map_err(|_| HomeSpeakError::FailedToCreateAnOutputStream)?;
 
@@ -97,6 +98,10 @@ fn audio_player_loop(receiver: &Receiver<AudioPlayerCommand>) -> anyhow::Result<
                 warn!("Ignoring stop because it destroys the sink");
                 // sink.stop()
             }
+            AudioPlayerCommand::Restart => {
+                info!("Restarting audio player");
+                return Ok(false);
+            }
             AudioPlayerCommand::Volume(volume) => {
                 info!("Settings volume to {}", volume);
                 sink.set_volume(volume)
@@ -110,8 +115,15 @@ pub fn create_player() -> Sender<AudioPlayerCommand> {
     thread::spawn(move || {
         // This may miss on sender being dead. But if sender is dead we have bigger issues
         loop {
-            if let Err(e) = audio_player_loop(&receiver) {
-                error!("Audio player loop failed with {}", e);
+            match audio_player_loop(&receiver) {
+                Err(err) => {
+                    error!("Audio player loop failed with {}", err);
+                }
+                Ok(terminate) => {
+                    if terminate {
+                        break;
+                    }
+                }
             }
         }
     });

@@ -355,6 +355,11 @@ impl AudioService {
         Ok(())
     }
 
+    pub fn restart_player(&self) -> Result<()> {
+        self.audio_sender.send(AudioPlayerCommand::Restart).unwrap();
+        Ok(())
+    }
+
     fn publish_audio_file(&self, data: &mut Box<dyn Playable>) -> Result<()> {
         if let Some(sender) = self.audio_data_broadcaster.as_ref().cloned() {
             let payload = data.as_bytes()?;
