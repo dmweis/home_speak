@@ -58,11 +58,14 @@ fn hash_azure_tts(
     format!("{}-{:x}", voice.name, hashed)
 }
 
+// Used to invalidate old cache
+const ELEVEN_LABS_FORMAT_VERSION: u32 = 5;
+
 fn hash_eleven_labs_tts(text: &str, voice_id: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(text);
     hasher.update(voice_id);
-    hasher.update(AZURE_FORMAT_VERSION.to_be_bytes());
+    hasher.update(ELEVEN_LABS_FORMAT_VERSION.to_be_bytes());
     let hashed = hasher.finalize();
     format!("eleven-{:x}", hashed)
 }

@@ -118,12 +118,12 @@ impl ElevenLabsTtsClient {
 
         let body = TtsRequest {
             text: text.to_owned(),
-            model_id: Some(String::from("eleven_multilingual_v1")),
+            model_id: Some(String::from("eleven_multilingual_v2")),
             voice_settings: Some(VoiceSettings {
-                similarity_boost: 0.5,
+                similarity_boost: 0.75,
                 stability: 0.5,
                 style: None,
-                use_speaker_boost: None,
+                use_speaker_boost: Some(true),
             }),
         };
 
