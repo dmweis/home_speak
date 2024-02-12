@@ -39,3 +39,7 @@ build-docker:
 .PHONY: push-docker-built
 push-docker-built: build-docker
 	rsync -avz --delete docker_out/* $(TARGET_HOST):/home/$(TARGET_USERNAME)/home-speak
+
+.PHONY: deploy-with-ez-cd
+deploy-with-ez-cd: build-docker
+	ez-cd-cli -f docker_out/home_speak_server.deb -d speakerpi
