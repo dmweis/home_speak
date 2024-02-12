@@ -22,6 +22,7 @@ impl SayHandler {
 
 #[async_trait]
 impl RouteHandler for SayHandler {
+    #[instrument(skip(self, content))]
     async fn call(
         &mut self,
         _topic: &str,
@@ -76,6 +77,7 @@ impl SayMoodHandler {
 
 #[async_trait]
 impl RouteHandler for SayMoodHandler {
+    #[instrument(skip(self, content))]
     async fn call(
         &mut self,
         _topic: &str,
@@ -112,6 +114,7 @@ impl SayElevenDefaultHandler {
 
 #[async_trait]
 impl RouteHandler for SayElevenDefaultHandler {
+    #[instrument(skip(self, content))]
     async fn call(
         &mut self,
         _topic: &str,
@@ -146,6 +149,7 @@ impl SayElevenCustomVoiceHandler {
 
 #[async_trait]
 impl RouteHandler for SayElevenCustomVoiceHandler {
+    #[instrument(skip(self, content))]
     async fn call(
         &mut self,
         topic: &str,
@@ -182,6 +186,7 @@ impl Mp3AudioPlayerHandler {
 
 #[async_trait]
 impl RouteHandler for Mp3AudioPlayerHandler {
+    #[instrument(skip(self, content))]
     async fn call(
         &mut self,
         _topic: &str,
@@ -190,11 +195,8 @@ impl RouteHandler for Mp3AudioPlayerHandler {
         info!("mqtt mp3 audio player");
 
         let audio = Box::new(Cursor::new(content.to_vec()));
-        match self.audio_service.play(audio) {
-            Ok(_) => (),
-            Err(e) => {
-                error!("Failed to call audio service {:?}", e);
-            }
+        if let Err(e) = self.audio_service.play(audio) {
+            error!("Failed to call audio service {:?}", e);
         }
         Ok(())
     }
@@ -212,6 +214,7 @@ impl RestartRequestHandler {
 
 #[async_trait]
 impl RouteHandler for RestartRequestHandler {
+    #[instrument(skip(self, _content))]
     async fn call(
         &mut self,
         _topic: &str,
