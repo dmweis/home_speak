@@ -1,5 +1,9 @@
 use clap::Parser;
-use home_speak::{configuration::get_configuration, eleven_labs_client};
+use home_speak::{
+    configuration::get_configuration,
+    eleven_labs_client::{self, VoiceSettings, DEFAULT_MODEL},
+    speech_service::DEFAULT_ELEVEN_LABS_VOICE_ID,
+};
 use secrecy::ExposeSecret;
 
 #[derive(Parser, Debug)]
@@ -26,9 +30,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let eleven_labs_client = eleven_labs_client::ElevenLabsTtsClient::new(key);
-    let voices = eleven_labs_client.voices().await?;
+    let data = eleven_labs_client
+        .tts(
+            "Hello world",
+            DEFAULT_ELEVEN_LABS_VOICE_ID,
+            Some(VoiceSettings::default()),
+            DEFAULT_MODEL,
+        )
+        .await?;
 
-    println!("{:}", serde_json::to_string_pretty(&voices)?);
+    println!("data size {:?} bytes", data.len());
 
     Ok(())
 }

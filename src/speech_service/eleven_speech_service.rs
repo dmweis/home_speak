@@ -33,7 +33,7 @@ fn hash_eleven_labs_tts(
 }
 
 /// voice Freya
-const DEFAULT_ELEVEN_LABS_VOICE_ID: &str = "jsCqWAovK2LkecY7zXl4";
+pub const DEFAULT_ELEVEN_LABS_VOICE_ID: &str = "jsCqWAovK2LkecY7zXl4";
 
 #[derive(Debug, Clone)]
 pub struct ElevenSpeechService {
