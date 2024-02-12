@@ -4,7 +4,7 @@ use crate::{
 };
 use anyhow::Context;
 use async_trait::async_trait;
-use mqtt_router::{RouteHandler, RouterError};
+use mqtt_router::RouteHandler;
 use serde::Deserialize;
 use std::{io::Cursor, str::from_utf8, sync::Arc};
 use tokio::sync::Mutex;
@@ -22,10 +22,13 @@ impl SayHandler {
 
 #[async_trait]
 impl RouteHandler for SayHandler {
-    async fn call(&mut self, _topic: &str, content: &[u8]) -> std::result::Result<(), RouterError> {
+    async fn call(
+        &mut self,
+        _topic: &str,
+        content: &[u8],
+    ) -> std::result::Result<(), anyhow::Error> {
         info!("mqtt say command");
-        let command: SayCommand =
-            serde_json::from_slice(content).map_err(|err| RouterError::HandlerError(err.into()))?;
+        let command: SayCommand = serde_json::from_slice(content)?;
 
         let message = if command.template {
             TemplateEngine::template_substitute(&command.content)
@@ -73,9 +76,13 @@ impl SayMoodHandler {
 
 #[async_trait]
 impl RouteHandler for SayMoodHandler {
-    async fn call(&mut self, _topic: &str, content: &[u8]) -> std::result::Result<(), RouterError> {
+    async fn call(
+        &mut self,
+        _topic: &str,
+        content: &[u8],
+    ) -> std::result::Result<(), anyhow::Error> {
         info!("mqtt say cheerful command");
-        let message = from_utf8(content).map_err(|err| RouterError::HandlerError(err.into()))?;
+        let message = from_utf8(content)?;
 
         match self
             .speech_service
@@ -105,9 +112,13 @@ impl SayElevenDefaultHandler {
 
 #[async_trait]
 impl RouteHandler for SayElevenDefaultHandler {
-    async fn call(&mut self, _topic: &str, content: &[u8]) -> std::result::Result<(), RouterError> {
+    async fn call(
+        &mut self,
+        _topic: &str,
+        content: &[u8],
+    ) -> std::result::Result<(), anyhow::Error> {
         info!("mqtt say eleven command");
-        let message = from_utf8(content).map_err(|err| RouterError::HandlerError(err.into()))?;
+        let message = from_utf8(content)?;
 
         match self
             .speech_service
@@ -135,16 +146,19 @@ impl SayElevenCustomVoiceHandler {
 
 #[async_trait]
 impl RouteHandler for SayElevenCustomVoiceHandler {
-    async fn call(&mut self, topic: &str, content: &[u8]) -> std::result::Result<(), RouterError> {
+    async fn call(
+        &mut self,
+        topic: &str,
+        content: &[u8],
+    ) -> std::result::Result<(), anyhow::Error> {
         let voice_name = topic
             .split('/')
             .last()
-            .context("Failed to extract voice name")
-            .map_err(|err| RouterError::HandlerError(err.into()))?;
+            .context("Failed to extract voice name")?;
 
         info!("mqtt say eleven custom voice command: {}", voice_name);
 
-        let message = from_utf8(content).map_err(|err| RouterError::HandlerError(err.into()))?;
+        let message = from_utf8(content)?;
 
         match self.speech_service.say_eleven(message, voice_name).await {
             Ok(_) => (),
@@ -168,7 +182,11 @@ impl Mp3AudioPlayerHandler {
 
 #[async_trait]
 impl RouteHandler for Mp3AudioPlayerHandler {
-    async fn call(&mut self, _topic: &str, content: &[u8]) -> std::result::Result<(), RouterError> {
+    async fn call(
+        &mut self,
+        _topic: &str,
+        content: &[u8],
+    ) -> std::result::Result<(), anyhow::Error> {
         info!("mqtt mp3 audio player");
 
         let audio = Box::new(Cursor::new(content.to_vec()));
@@ -198,7 +216,7 @@ impl RouteHandler for RestartRequestHandler {
         &mut self,
         _topic: &str,
         _content: &[u8],
-    ) -> std::result::Result<(), RouterError> {
+    ) -> std::result::Result<(), anyhow::Error> {
         info!("mqtt mp3 audio player");
 
         match self.audio_service.restart_player() {
