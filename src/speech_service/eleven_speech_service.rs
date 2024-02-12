@@ -1,6 +1,6 @@
 use anyhow::Context;
 use anyhow::Result;
-use log::*;
+use tracing::*;
 use secrecy::{ExposeSecret, Secret};
 use sha2::{Digest, Sha256};
 use std::io::Cursor;

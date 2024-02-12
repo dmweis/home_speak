@@ -5,9 +5,9 @@ use home_speak::{
     configuration::get_configuration,
     speech_service::{AudioService, SpeechService, TtsService},
 };
-use log::*;
-use simplelog::*;
 use std::{io::Read, path::PathBuf, str};
+use tracing::*;
+use tracing_subscriber::EnvFilter;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about)]
@@ -83,17 +83,7 @@ fn start_speech_service_worker(
 }
 
 fn setup_logging() {
-    if TermLogger::init(
-        LevelFilter::Info,
-        Config::default(),
-        TerminalMode::Mixed,
-        ColorChoice::Auto,
-    )
-    .is_err()
-    {
-        eprintln!("Failed to create term logger");
-        if SimpleLogger::init(LevelFilter::Info, Config::default()).is_err() {
-            eprintln!("Failed to create simple logger");
-        }
-    }
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
 }

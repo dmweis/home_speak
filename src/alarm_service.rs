@@ -4,9 +4,9 @@ use crate::{
     template_messages::TemplateEngine,
 };
 use clokwerk::{Job, JobId, TimeUnits};
-use log::*;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing::*;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Alarm {

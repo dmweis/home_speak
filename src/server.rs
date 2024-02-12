@@ -7,9 +7,9 @@ use crate::{
 #[cfg(feature = "hotreload")]
 use actix_files::NamedFile;
 use actix_web::{delete, get, post, web, App, HttpResponse, HttpServer, Responder};
-use log::*;
 use std::{str, sync::Arc};
 use tokio::sync::Mutex;
+use tracing::*;
 
 #[derive(serde::Deserialize)]
 struct SayCommand {

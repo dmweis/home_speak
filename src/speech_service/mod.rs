@@ -3,11 +3,11 @@ mod audio_service;
 mod eleven_speech_service;
 
 use anyhow::Result;
-use log::*;
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::io::Cursor;
+use tracing::*;
 
 pub use self::{
     audio_player::Playable,

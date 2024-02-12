@@ -1,8 +1,8 @@
 use crate::speech_service::TtsService;
-use log::*;
 use secrecy::Secret;
 use serde::Deserialize;
 use std::{path::PathBuf, str};
+use tracing::*;
 
 /// Use default config if no path is provided
 pub fn get_configuration(config: Option<PathBuf>) -> Result<AppConfig, anyhow::Error> {

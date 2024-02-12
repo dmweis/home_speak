@@ -35,8 +35,6 @@ azure_tts = {git = "https://github.com/dmweis/azure_tts", branch = "main"}
 google_tts = {git = "https://github.com/dmweis/google_tts", branch = "main"}
 
 # utils
-log = "0.4"
-simplelog = "0.12"
 anyhow = "1.0"
 base64 = "0.21.0"
 async-trait = "0.1"
@@ -51,6 +49,13 @@ ordinal = "0.3.1"
 serde_json = "1.0"
 serde = {version = "1.0", features = ["derive"]}
 
+# logging
+tracing = {version = "0.1", features = ["log"]}
+tracing-subscriber = {version = "0.3", features = [
+  "registry",
+  "env-filter",
+  "json",
+]}
 
 # web
 actix-web = {version = "4", default-features = false, features = ["macros", "cookies"]}

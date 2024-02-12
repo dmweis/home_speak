@@ -1,10 +1,10 @@
 use chrono::prelude::*;
 use local_ip_address::list_afinet_netifas;
-use log::*;
 use num_traits::FromPrimitive;
 use ordinal::Ordinal;
 use std::net::IpAddr;
 use std::{fmt::Write, process::Command, str};
+use tracing::*;
 
 use crate::configuration::AssistantConfig;
 

@@ -4,11 +4,11 @@ use crate::{
 };
 use anyhow::Context;
 use async_trait::async_trait;
-use log::*;
 use mqtt_router::{RouteHandler, RouterError};
 use serde::Deserialize;
 use std::{io::Cursor, str::from_utf8, sync::Arc};
 use tokio::sync::Mutex;
+use tracing::*;
 
 pub struct SayHandler {
     speech_service: Arc<Mutex<SpeechService>>,

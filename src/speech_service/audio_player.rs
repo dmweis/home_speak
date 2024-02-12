@@ -1,5 +1,4 @@
 use crate::error::{HomeSpeakError, Result};
-use log::*;
 use rodio::cpal::traits::{DeviceTrait, HostTrait};
 use std::io::Seek;
 use std::sync::mpsc::Receiver;
@@ -9,6 +8,7 @@ use std::{
     sync::mpsc::{channel, Sender},
     thread,
 };
+use tracing::*;
 
 pub trait Playable: std::io::Read + std::io::Seek + Send + Sync {
     fn as_bytes(&mut self) -> Result<Vec<u8>>;

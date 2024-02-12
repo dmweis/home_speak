@@ -7,11 +7,11 @@ use crate::{
     },
     speech_service::{AudioService, AzureVoiceStyle, ElevenSpeechService, SpeechService},
 };
-use log::*;
 use mqtt_router::Router;
 use rumqttc::{AsyncClient, ConnAck, Event, Incoming, MqttOptions, Publish, QoS, SubscribeFilter};
 use std::{sync::Arc, time::Duration};
 use tokio::sync::{mpsc::unbounded_channel, Mutex};
+use tracing::*;
 
 enum MqttUpdate {
     Message(Publish),

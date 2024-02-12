@@ -10,14 +10,14 @@ use home_speak::{
     speech_service::{AudioMessage, AudioService, ElevenSpeechService, SpeechService, TtsService},
     template_messages::TemplateEngine,
 };
-use log::*;
 use rumqttc::AsyncClient;
-use simplelog::*;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::{
     mpsc::{unbounded_channel, UnboundedReceiver},
     Mutex,
 };
+use tracing::*;
+use tracing_subscriber::EnvFilter;
 
 const MQTT_AUDIO_PUB_TOPIC: &str = "transcribed_audio";
 
@@ -124,17 +124,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 fn setup_logging() {
-    if TermLogger::init(
-        LevelFilter::Info,
-        Config::default(),
-        TerminalMode::Mixed,
-        ColorChoice::Auto,
-    )
-    .is_err()
-    {
-        eprintln!("Failed to create term logger");
-        if SimpleLogger::init(LevelFilter::Info, Config::default()).is_err() {
-            eprintln!("Failed to create simple logger");
-        }
-    }
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
 }
