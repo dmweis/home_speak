@@ -30,11 +30,8 @@ pub fn get_configuration(config: Option<PathBuf>) -> Result<AppConfig, anyhow::E
 #[derive(Deserialize, Debug, Clone)]
 pub struct AppConfig {
     pub tts_service_config: TtsServiceConfig,
-    pub server_config: ServerConfig,
     #[serde(default)]
     pub skip_intro: bool,
-    #[serde(default)]
-    pub alarm_config: AlarmConfig,
     pub assistant_config: AssistantConfig,
     pub mqtt: MqttConfig,
 }
@@ -46,17 +43,6 @@ pub struct TtsServiceConfig {
     pub eleven_labs_api_key: Secret<String>,
     pub cache_dir_path: Option<String>,
     pub tts_service: TtsService,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct ServerConfig {
-    pub host: String,
-    pub port: u16,
-}
-
-#[derive(Deserialize, Debug, Clone, Default)]
-pub struct AlarmConfig {
-    pub save_file_path: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]

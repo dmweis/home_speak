@@ -2,20 +2,15 @@
 use actix_files::NamedFile;
 use clap::Parser;
 use home_speak::{
-    alarm_service::AlarmService,
     audio_cache,
     configuration::get_configuration,
     mqtt::start_mqtt_service,
-    server::start_server,
     speech_service::{AudioMessage, AudioService, ElevenSpeechService, SpeechService, TtsService},
     template_messages::TemplateEngine,
 };
 use rumqttc::AsyncClient;
 use std::{path::PathBuf, sync::Arc};
-use tokio::sync::{
-    mpsc::{unbounded_channel, UnboundedReceiver},
-    Mutex,
-};
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 use tracing::*;
 use tracing_subscriber::EnvFilter;
 
@@ -61,10 +56,7 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
 
-    let template_engine = TemplateEngine::new(
-        app_config.assistant_config.clone(),
-        app_config.server_config.port,
-    );
+    let template_engine = TemplateEngine::new(app_config.assistant_config.clone());
 
     if !app_config.skip_intro {
         let startup_message = template_engine.startup_message();
@@ -75,17 +67,6 @@ async fn main() -> anyhow::Result<()> {
 
     let speech_service = Arc::new(tokio::sync::Mutex::new(speech_service));
 
-    let alarm_service = Arc::new(tokio::sync::Mutex::new(AlarmService::new(
-        speech_service.clone(),
-    )));
-
-    if let Some(ref path) = app_config.alarm_config.save_file_path {
-        if let Err(e) = alarm_service.lock().await.add_alarms_from_file(path).await {
-            error!("Failed to read saved alarms from {} with error {}", path, e);
-            return Err(anyhow::anyhow!("Failed to read saved alarms {}", e));
-        }
-    }
-
     // TODO: I can't pass the client to the speech service since the speech service needs to be passed here....
     let client = start_mqtt_service(
         app_config.clone(),
@@ -94,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
         audio_service,
     )?;
 
-    tokio::spawn(async move {
+    let audio_worker_task = tokio::spawn(async move {
         async fn helper(
             audio_receiver: &mut UnboundedReceiver<AudioMessage>,
             mqtt_base_topic: &str,
@@ -116,9 +97,7 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    let template_engine = Arc::new(Mutex::new(template_engine));
-
-    start_server(app_config, speech_service, alarm_service, template_engine).await?;
+    audio_worker_task.await?;
 
     Ok(())
 }

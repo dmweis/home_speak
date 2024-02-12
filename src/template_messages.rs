@@ -11,18 +11,16 @@ use crate::configuration::AssistantConfig;
 #[derive(Debug, Clone)]
 pub struct TemplateEngine {
     assistant_config: AssistantConfig,
-    port: u16,
     hostname: Option<String>,
     network_interfaces: Option<Vec<(String, IpAddr)>>,
 }
 
 impl TemplateEngine {
-    pub fn new(assistant_config: AssistantConfig, port: u16) -> Self {
+    pub fn new(assistant_config: AssistantConfig) -> Self {
         let hostname = hostname();
         let network_interfaces = network_interfaces();
         Self {
             assistant_config,
-            port,
             hostname,
             network_interfaces,
         }
@@ -68,7 +66,6 @@ impl TemplateEngine {
                 "I can't detect my hostname. Maybe this platform isn't supported?",
             ));
         }
-        message_buffer.push(format!("My server is running on port {}. ", self.port));
 
         message_buffer
     }

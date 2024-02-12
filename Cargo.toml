@@ -57,11 +57,6 @@ tracing-subscriber = {version = "0.3", features = [
   "json",
 ]}
 
-# web
-actix-web = {version = "4", default-features = false, features = ["macros", "cookies"]}
-actix-files = {version = "0.6", optional = true}
-
-clokwerk = {git = "https://github.com/dmweis/clokwerk", branch = "main"}
 config = "0.14.0"
 local-ip-address = "0.5"
 mqtt-router = {git = "https://github.com/dmweis/mqtt-router", branch = "main"}
@@ -72,12 +67,9 @@ rodio = { version = "0.17"}
 # fix weird bug with mp3 not playing from start
 # rodio = {git = "https://github.com/RustAudio/rodio", rev = "55d957f8b40c59fccea4162c4b03f6dd87a7a4d9"}
 
-
 rumqttc = "0.23.0"
 secrecy = {version = "0.8", features = ["serde"]}
 sha2 = "0.10"
 thiserror = "1.0"
 tokio = {version = "1", features = ["macros", "rt-multi-thread", "fs"]}
 
-[features]
-hotreload = ["actix-files"]
