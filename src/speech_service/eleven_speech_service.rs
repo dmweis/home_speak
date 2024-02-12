@@ -1,23 +1,32 @@
 use anyhow::Context;
 use anyhow::Result;
-use tracing::*;
 use secrecy::{ExposeSecret, Secret};
 use sha2::{Digest, Sha256};
 use std::io::Cursor;
+use tracing::*;
 
 use crate::audio_cache::AudioCache;
 use crate::eleven_labs_client;
+use crate::eleven_labs_client::VoiceSettings;
+use crate::eleven_labs_client::DEFAULT_MODEL;
 use crate::speech_service::Playable;
 
 use super::AudioService;
 
 // Used to invalidate old cache
-const ELEVEN_LABS_FORMAT_VERSION: u32 = 5;
+const ELEVEN_LABS_FORMAT_VERSION: u32 = 6;
 
-fn hash_eleven_labs_tts(text: &str, voice_id: &str) -> String {
+fn hash_eleven_labs_tts(
+    text: &str,
+    voice_id: &str,
+    voice_settings: &VoiceSettings,
+    model: &str,
+) -> String {
     let mut hasher = Sha256::new();
     hasher.update(text);
     hasher.update(voice_id);
+    hasher.update(model);
+    hasher.update(&serde_json::to_vec(voice_settings).unwrap());
     hasher.update(ELEVEN_LABS_FORMAT_VERSION.to_be_bytes());
     let hashed = hasher.finalize();
     format!("eleven-{:x}", hashed)
@@ -77,13 +86,19 @@ impl ElevenSpeechService {
     }
 
     pub async fn say_eleven_with_voice_id(&self, text: &str, voice_id: &str) -> Result<()> {
-        let file_key = hash_eleven_labs_tts(text, voice_id);
+        let voice_settings = VoiceSettings::default();
+        let voice_model = DEFAULT_MODEL;
+
+        let file_key = hash_eleven_labs_tts(text, voice_id, &voice_settings, voice_model);
         let sound: Box<dyn Playable> = if let Some(file) = self.audio_cache.get(&file_key) {
             info!("Using cached value with key {}", file_key);
             file
         } else {
             info!("Writing new file with key {}", file_key);
-            let data = self.eleven_labs_client.tts(text, voice_id).await?;
+            let data = self
+                .eleven_labs_client
+                .tts(text, voice_id, Some(voice_settings), voice_model)
+                .await?;
             let sound: Box<dyn Playable> = Box::new(Cursor::new(data.to_vec()));
             self.audio_cache.set(&file_key, data.to_vec())?;
             sound

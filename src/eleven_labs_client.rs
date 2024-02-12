@@ -4,6 +4,8 @@ use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+pub const DEFAULT_MODEL: &str = "eleven_multilingual_v2";
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TtsRequest {
     /// Identifier of the model that will be used.
@@ -27,6 +29,17 @@ pub struct VoiceSettings {
     pub style: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub use_speaker_boost: Option<bool>,
+}
+
+impl Default for VoiceSettings {
+    fn default() -> Self {
+        Self {
+            similarity_boost: 0.75,
+            stability: 0.5,
+            style: None,
+            use_speaker_boost: Some(true),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -113,18 +126,19 @@ impl ElevenLabsTtsClient {
         }
     }
 
-    pub async fn tts(&self, text: &str, voice_id: &str) -> Result<Bytes> {
+    pub async fn tts(
+        &self,
+        text: &str,
+        voice_id: &str,
+        voice_settings: Option<VoiceSettings>,
+        model: &str,
+    ) -> Result<Bytes> {
         let url = format!("https://api.elevenlabs.io/v1/text-to-speech/{}", voice_id);
 
         let body = TtsRequest {
             text: text.to_owned(),
-            model_id: Some(String::from("eleven_multilingual_v2")),
-            voice_settings: Some(VoiceSettings {
-                similarity_boost: 0.75,
-                stability: 0.5,
-                style: None,
-                use_speaker_boost: Some(true),
-            }),
+            model_id: Some(model.to_owned()),
+            voice_settings,
         };
 
         let resp = self
