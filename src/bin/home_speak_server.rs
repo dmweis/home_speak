@@ -5,7 +5,9 @@ use home_speak::{
     audio_cache,
     configuration::get_configuration,
     mqtt::start_mqtt_service,
-    speech_service::{AudioMessage, AudioService, ElevenSpeechService, SpeechService, TtsService},
+    speech_service::{
+        AudioMessage, AudioRepository, AudioService, ElevenSpeechService, SpeechService, TtsService,
+    },
     template_messages::TemplateEngine,
 };
 use rumqttc::AsyncClient;
@@ -56,6 +58,9 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
 
+    let audio_repository_service =
+        AudioRepository::new(&app_config.audio_repository_path, audio_service.clone())?;
+
     let template_engine = TemplateEngine::new(app_config.assistant_config.clone());
 
     if !app_config.skip_intro {
@@ -73,6 +78,7 @@ async fn main() -> anyhow::Result<()> {
         speech_service.clone(),
         eleven_speech_service,
         audio_service,
+        audio_repository_service,
     )?;
 
     let audio_worker_task = tokio::spawn(async move {

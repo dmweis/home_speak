@@ -34,6 +34,7 @@ pub struct AppConfig {
     pub skip_intro: bool,
     pub assistant_config: AssistantConfig,
     pub mqtt: MqttConfig,
+    pub audio_repository_path: PathBuf,
 }
 
 #[derive(Deserialize, Debug, Clone)]

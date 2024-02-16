@@ -31,4 +31,6 @@ pub enum HomeSpeakError {
     AudioChannelSendError,
     #[error("reqwest error")]
     ReqwestError(#[from] reqwest::Error),
+    #[error("Audio cache dir error")]
+    AudioCacheDirError,
 }

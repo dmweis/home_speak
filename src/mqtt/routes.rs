@@ -1,5 +1,7 @@
 use crate::{
-    speech_service::{AudioService, AzureVoiceStyle, ElevenSpeechService, SpeechService},
+    speech_service::{
+        AudioRepository, AudioService, AzureVoiceStyle, ElevenSpeechService, SpeechService,
+    },
     template_messages::TemplateEngine,
 };
 use anyhow::Context;
@@ -226,6 +228,38 @@ impl RouteHandler for RestartRequestHandler {
             Ok(_) => (),
             Err(e) => {
                 error!("Failed to call audio service {:?}", e);
+            }
+        }
+        Ok(())
+    }
+}
+
+pub struct PlayAudioFileHandler {
+    audio_repository: AudioRepository,
+}
+
+impl PlayAudioFileHandler {
+    pub fn new(audio_service: AudioRepository) -> Box<Self> {
+        Box::new(Self {
+            audio_repository: audio_service,
+        })
+    }
+}
+
+#[async_trait]
+impl RouteHandler for PlayAudioFileHandler {
+    #[instrument(skip(self, content))]
+    async fn call(
+        &mut self,
+        _topic: &str,
+        content: &[u8],
+    ) -> std::result::Result<(), anyhow::Error> {
+        let file_path = std::str::from_utf8(content)?;
+        info!("Playing {:?}", file_path);
+        match self.audio_repository.play_file(file_path) {
+            Ok(_) => (),
+            Err(e) => {
+                error!("Failed to play audio file {:?}", e);
             }
         }
         Ok(())

@@ -11,3 +11,4 @@ mqtt:
   base_route: "test_speech"
   broker_host: "homepi.local"
   client_id: "home_speak_test_instance"
+audio_repository_path: "/etc/home_speak/audio/"

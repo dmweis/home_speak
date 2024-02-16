@@ -2,10 +2,12 @@ use super::routes::{SayHandler, SayMoodHandler};
 use crate::{
     configuration::AppConfig,
     mqtt::routes::{
-        Mp3AudioPlayerHandler, RestartRequestHandler, SayElevenCustomVoiceHandler,
-        SayElevenDefaultHandler,
+        Mp3AudioPlayerHandler, PlayAudioFileHandler, RestartRequestHandler,
+        SayElevenCustomVoiceHandler, SayElevenDefaultHandler,
     },
-    speech_service::{AudioService, AzureVoiceStyle, ElevenSpeechService, SpeechService},
+    speech_service::{
+        AudioRepository, AudioService, AzureVoiceStyle, ElevenSpeechService, SpeechService,
+    },
 };
 use mqtt_router::Router;
 use rumqttc::{AsyncClient, ConnAck, Event, Incoming, MqttOptions, Publish, QoS, SubscribeFilter};
@@ -25,6 +27,7 @@ pub fn start_mqtt_service(
     speech_service: Arc<Mutex<SpeechService>>,
     eleven_speech_service: ElevenSpeechService,
     audio_service: AudioService,
+    audio_repository: AudioRepository,
 ) -> anyhow::Result<AsyncClient> {
     let mut mqttoptions = MqttOptions::new(
         &app_config.mqtt.client_id,
@@ -131,6 +134,13 @@ pub fn start_mqtt_service(
             .add_handler(
                 &format!("{}/restart", base_topic),
                 RestartRequestHandler::new(audio_service.clone()),
+            )
+            .unwrap();
+
+        router
+            .add_handler(
+                &format!("{}/play_file", base_topic),
+                PlayAudioFileHandler::new(audio_repository.clone()),
             )
             .unwrap();
 
