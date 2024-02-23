@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"home_speak":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.76.0/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"enum\" href=\"home_speak/speech_service/enum.TtsService.html\" title=\"enum home_speak::speech_service::TtsService\">TtsService</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.76.0/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"enum\" href=\"home_speak/speech_service/enum.AzureVoiceStyle.html\" title=\"enum home_speak::speech_service::AzureVoiceStyle\">AzureVoiceStyle</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

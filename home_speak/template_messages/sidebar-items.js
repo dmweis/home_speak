@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_human_current_date_time","get_human_current_time"],"struct":["TemplateEngine"]};

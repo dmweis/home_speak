@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["main","setup_logging","start_speech_service_worker"],"struct":["Opts","SpeechServiceHandle"]};

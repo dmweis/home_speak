@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["audio_cache","configuration","eleven_labs_client","error","logging","mqtt","speech_service","template_messages"]};

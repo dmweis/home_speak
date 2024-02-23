@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_MODEL"],"struct":["ElevenLabsTtsClient","Invoice","Subscription","TtsRequest","Voice","VoiceSample","VoiceSettings","Voices"]};

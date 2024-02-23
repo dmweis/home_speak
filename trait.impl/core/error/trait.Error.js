@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"home_speak":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.76.0/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"enum\" href=\"home_speak/error/enum.HomeSpeakError.html\" title=\"enum home_speak::error::HomeSpeakError\">HomeSpeakError</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_configuration"],"struct":["AppConfig","AssistantConfig","HomeSpeakZenohConfig","MqttConfig","TtsServiceConfig"]};

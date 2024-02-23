@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_ELEVEN_LABS_VOICE_ID"],"enum":["AzureVoiceStyle","TtsService"],"struct":["AudioMessage","AudioRepository","AudioService","ElevenSpeechService","SpeechService"],"trait":["Playable"]};
