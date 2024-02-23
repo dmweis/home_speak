@@ -4,6 +4,8 @@ use clap::Parser;
 use home_speak::{
     audio_cache,
     configuration::get_configuration,
+    error::HomeSpeakError,
+    logging::{set_global_tracing_zenoh_subscriber, setup_tracing},
     mqtt::start_mqtt_service,
     speech_service::{
         AudioMessage, AudioRepository, AudioService, ElevenSpeechService, SpeechService, TtsService,
@@ -14,7 +16,7 @@ use rumqttc::AsyncClient;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 use tracing::*;
-use tracing_subscriber::EnvFilter;
+use zenoh::prelude::r#async::*;
 
 const MQTT_AUDIO_PUB_TOPIC: &str = "transcribed_audio";
 
@@ -23,14 +25,28 @@ const MQTT_AUDIO_PUB_TOPIC: &str = "transcribed_audio";
 struct Opts {
     #[clap(long)]
     config: Option<PathBuf>,
+
+    /// Sets the level of verbosity
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    verbose: u8,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    setup_logging();
     let opts = Opts::parse();
+    setup_tracing(opts.verbose, "home-speak");
 
     let app_config = get_configuration(opts.config)?;
+
+    // zenoh
+    let zenoh_config = app_config.zenoh.get_zenoh_config()?;
+    let zenoh_session = zenoh::open(zenoh_config)
+        .res()
+        .await
+        .map_err(HomeSpeakError::ZenohError)?
+        .into_arc();
+
+    set_global_tracing_zenoh_subscriber(zenoh_session);
 
     let mqtt_base_topic = app_config.mqtt.base_route.clone();
 
@@ -106,10 +122,4 @@ async fn main() -> anyhow::Result<()> {
     audio_worker_task.await?;
 
     Ok(())
-}
-
-fn setup_logging() {
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .init();
 }

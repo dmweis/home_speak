@@ -33,4 +33,6 @@ pub enum HomeSpeakError {
     ReqwestError(#[from] reqwest::Error),
     #[error("Audio cache dir error")]
     AudioCacheDirError,
+    #[error("Zenoh error {0:?}")]
+    ZenohError(#[from] zenoh::Error),
 }

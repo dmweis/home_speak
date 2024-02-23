@@ -2,6 +2,7 @@ pub mod audio_cache;
 pub mod configuration;
 pub mod eleven_labs_client;
 pub mod error;
+pub mod logging;
 pub mod mqtt;
 pub mod speech_service;
 pub mod template_messages;
