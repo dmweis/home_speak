@@ -234,6 +234,31 @@ impl RouteHandler for RestartRequestHandler {
     }
 }
 
+pub struct SkipOneRequestHandler {
+    audio_service: AudioService,
+}
+
+impl SkipOneRequestHandler {
+    pub fn new(audio_service: AudioService) -> Box<Self> {
+        Box::new(Self { audio_service })
+    }
+}
+
+#[async_trait]
+impl RouteHandler for SkipOneRequestHandler {
+    #[instrument(skip(self, _content))]
+    async fn call(
+        &mut self,
+        _topic: &str,
+        _content: &[u8],
+    ) -> std::result::Result<(), anyhow::Error> {
+        info!("Skip one request");
+
+        self.audio_service.skip_one();
+        Ok(())
+    }
+}
+
 pub struct PlayAudioFileHandler {
     audio_repository: AudioRepository,
 }

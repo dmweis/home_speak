@@ -69,6 +69,10 @@ impl AudioService {
         self.audio_sender.send(AudioPlayerCommand::Stop).unwrap();
     }
 
+    pub fn skip_one(&self) {
+        self.audio_sender.send(AudioPlayerCommand::SkipOne).unwrap();
+    }
+
     pub fn volume(&self, volume: f32) {
         self.audio_sender
             .send(AudioPlayerCommand::Volume(volume))

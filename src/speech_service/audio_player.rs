@@ -35,6 +35,7 @@ pub enum AudioPlayerCommand {
     Stop,
     Volume(f32),
     Restart,
+    SkipOne,
 }
 
 /// Select the first audio output device that contains "CARD=Device" in its name
@@ -104,7 +105,11 @@ fn audio_player_loop(receiver: &Receiver<AudioPlayerCommand>) -> anyhow::Result<
             }
             AudioPlayerCommand::Volume(volume) => {
                 info!("Settings volume to {}", volume);
-                sink.set_volume(volume)
+                sink.set_volume(volume);
+            }
+            AudioPlayerCommand::SkipOne => {
+                info!("Skipping audio source");
+                sink.skip_one();
             }
         }
     }
